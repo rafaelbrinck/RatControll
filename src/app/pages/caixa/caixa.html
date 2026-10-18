@@ -56,11 +56,11 @@
             </select>
           </label>
 
-          <label *ngIf="tipoEvento === 'Nascimento'" for="quantidadeFilhotes" class="block text-sm font-semibold text-slate-700">Quantidade de filhotes
-            <input id="quantidadeFilhotes" name="quantidadeFilhotes" type="number" min="0" step="1" [(ngModel)]="quantidadeFilhotes" placeholder="Ex.: 8" class="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100" />
+          <label *ngIf="eventoUsaQuantidade" for="quantidadeFilhotes" class="block text-sm font-semibold text-slate-700">Quantidade de filhotes <span *ngIf="tipoEvento !== 'Nascimento'" class="font-normal text-slate-500">(opcional)</span>
+            <input id="quantidadeFilhotes" name="quantidadeFilhotes" type="number" min="0" max="32767" step="1" [(ngModel)]="quantidadeFilhotes" placeholder="Ex.: 8" class="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100" />
           </label>
 
-          <label for="detalhesEvento" class="block text-sm font-semibold text-slate-700">Detalhes <span class="font-normal text-slate-500">(opcional para nascimento)</span>
+          <label for="detalhesEvento" class="block text-sm font-semibold text-slate-700">Detalhes <span class="font-normal text-slate-500">({{ eventoExigeDetalhes ? 'obrigatório para este evento' : 'opcional' }})</span>
             <textarea id="detalhesEvento" name="detalhesEvento" [(ngModel)]="detalhes" rows="3" placeholder="Ex.: observações do manejo, linhagem ou condição da ninhada" class="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-normal outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100"></textarea>
           </label>
 
@@ -69,14 +69,64 @@
       </section>
 
       <section>
-        <div class="mb-4 flex items-end justify-between gap-3"><div><p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Histórico</p><h2 class="mt-1 text-xl font-bold">Atividade recente</h2></div></div>
-        <div *ngIf="observacoes().length" class="space-y-3">
-          <article *ngFor="let observacao of observacoes()" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p class="font-medium leading-6 text-slate-800">{{ observacao.observacao }}</p>
-            <p class="mt-2 text-xs text-slate-500">{{ observacao.created_at | date:'dd/MM/yyyy · HH:mm' }}</p>
+        <div class="mb-5 flex items-end justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Linha do tempo</p>
+            <h2 class="mt-1 text-xl font-bold">Atividade da caixa</h2>
+          </div>
+          <span class="rounded-full bg-slate-200/70 px-3 py-1.5 text-xs font-semibold text-slate-600">{{ registrosHistorico().length }} registros</span>
+        </div>
+
+        <nav *ngIf="registrosHistorico().length" aria-label="Filtrar histórico por tipo" class="mb-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
+          <button
+            type="button"
+            (click)="definirFiltroHistorico('Todos')"
+            [ngClass]="filtroHistorico() === 'Todos' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'"
+            class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold transition"
+          >Todos <span class="opacity-70">{{ contarRegistros('Todos') }}</span></button>
+          <button
+            *ngFor="let categoria of categoriasEvento"
+            type="button"
+            (click)="definirFiltroHistorico(categoria)"
+            [ngClass]="filtroHistorico() === categoria ? estiloCategoria(categoria) + ' border-current' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'"
+            class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition"
+          >{{ categoria }} <span class="opacity-70">{{ contarRegistros(categoria) }}</span></button>
+        </nav>
+
+        <div *ngIf="registrosFiltrados().length" class="space-y-3">
+          <article *ngFor="let registro of registrosFiltrados()" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-l-4 p-4 sm:p-5" [ngClass]="estiloCategoria(registro.categoria)">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="flex min-w-0 items-start gap-3">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-sm font-bold shadow-sm" aria-hidden="true">{{ registro.categoria.slice(0, 1) }}</span>
+                  <div class="min-w-0">
+                    <span class="inline-flex rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">{{ registro.categoria }}</span>
+                    <p *ngIf="registro.detalhes" class="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-700">{{ registro.detalhes }}</p>
+                  </div>
+                </div>
+                <time class="shrink-0 text-right text-xs font-medium text-slate-500" [attr.datetime]="registro.created_at">
+                  <span class="block">{{ registro.created_at | date:'dd MMM yyyy' }}</span>
+                  <span class="mt-1 block text-[11px] font-normal">{{ registro.created_at | date:'HH:mm' }}</span>
+                </time>
+              </div>
+
+              <div *ngIf="registro.quantidadeFilhotes !== undefined" class="mt-4 flex items-baseline gap-2 rounded-xl bg-white/75 px-3 py-2.5 sm:ml-[52px] sm:inline-flex">
+                <strong class="text-2xl font-bold leading-none">{{ registro.quantidadeFilhotes }}</strong>
+                <span class="text-xs font-semibold">{{ registro.quantidadeFilhotes === 1 ? 'filhote' : 'filhotes' }}</span>
+              </div>
+            </div>
           </article>
         </div>
-        <div *ngIf="!observacoes().length && !carregando()" class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-9 text-center text-sm text-slate-500">Ainda não há eventos registrados nesta caixa.</div>
+
+        <div *ngIf="!registrosHistorico().length && !carregando()" class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
+          <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-lg font-bold text-emerald-700" aria-hidden="true">+</span>
+          <h3 class="mt-3 text-sm font-bold text-slate-800">Nenhum registro nesta caixa</h3>
+          <p class="mt-1 text-sm text-slate-500">Os eventos do ciclo reprodutivo aparecerão aqui.</p>
+        </div>
+
+        <div *ngIf="registrosHistorico().length && !registrosFiltrados().length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center text-sm text-slate-500">
+          Nenhum registro da categoria selecionada.
+        </div>
       </section>
     </ng-container>
   </div>

@@ -1,11 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import QRCode from 'qrcode';
 import { Auth } from '../../core/auth/auth';
 import { Caixa, CaixasService } from '../../core/data/caixas';
+
+type FiltroStatus = 'Todas' | 'Ativas' | 'Livres';
+
+interface QrCaixa {
+  caixa: Caixa;
+  imagem?: string;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -22,7 +29,24 @@ export class Dashboard implements OnDestroy {
   private scannerControls?: IScannerControls;
 
   readonly caixas = this.caixasService.caixas;
-  readonly qrCodes = signal<Record<number, string>>({});
+  readonly busca = signal('');
+  readonly filtroStatus = signal<FiltroStatus>('Todas');
+  readonly formularioCaixaAberto = signal(false);
+  readonly qrSelecionado = signal<QrCaixa | undefined>(undefined);
+  readonly gerandoQr = signal(false);
+  readonly caixasFiltradas = computed(() => {
+    const termo = this.busca().trim().toLocaleLowerCase('pt-BR');
+    const filtro = this.filtroStatus();
+
+    return this.caixas().filter((caixa) => {
+      const correspondeBusca = !termo || `caixa ${caixa.numero}`.includes(termo);
+      const correspondeStatus = filtro === 'Todas'
+        || (filtro === 'Ativas' ? caixa.status : !caixa.status);
+      return correspondeBusca && correspondeStatus;
+    });
+  });
+  readonly totalAtivas = computed(() => this.caixas().filter((caixa) => caixa.status).length);
+  readonly totalLivres = computed(() => this.caixas().filter((caixa) => !caixa.status).length);
   numeroNovaCaixa: number | null = null;
   readonly carregando = signal(true);
   readonly salvando = signal(false);
@@ -48,20 +72,9 @@ export class Dashboard implements OnDestroy {
 
     this.carregando.set(true);
     this.erro.set('');
-    this.qrCodes.set({});
 
     try {
-      const caixas = await this.caixasService.listar(currentUserId);
-      const qrCodes: Record<number, string> = {};
-      await Promise.all(caixas.map(async (caixa) => {
-        const url = new URL(`/caixa/${caixa.id}`, window.location.origin).toString();
-        qrCodes[caixa.id] = await QRCode.toDataURL(url, {
-          width: 220,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-        });
-      }));
-      this.qrCodes.set(qrCodes);
+      await this.caixasService.listar(currentUserId);
     } catch (error) {
       this.erro.set(error instanceof Error ? error.message : 'Não foi possível carregar as caixas.');
     } finally {
@@ -71,7 +84,7 @@ export class Dashboard implements OnDestroy {
 
   async criarCaixa(): Promise<void> {
     const userId = this.auth.getUserLogado();
-    if (!userId || !this.numeroNovaCaixa || this.numeroNovaCaixa < 1) {
+    if (!userId || !Number.isInteger(this.numeroNovaCaixa) || !this.numeroNovaCaixa || this.numeroNovaCaixa < 1) {
       this.erro.set('Informe um número de caixa válido.');
       return;
     }
@@ -82,12 +95,42 @@ export class Dashboard implements OnDestroy {
     try {
       await this.caixasService.criar(this.numeroNovaCaixa, userId);
       this.numeroNovaCaixa = null;
+      this.formularioCaixaAberto.set(false);
       await this.carregarCaixas();
     } catch (error) {
       this.erro.set(error instanceof Error ? error.message : 'Não foi possível cadastrar a caixa.');
     } finally {
       this.salvando.set(false);
     }
+  }
+
+  definirFiltroStatus(filtro: FiltroStatus): void {
+    this.filtroStatus.set(filtro);
+  }
+
+  async abrirQr(caixa: Caixa): Promise<void> {
+    this.qrSelecionado.set({ caixa });
+    this.gerandoQr.set(true);
+
+    try {
+      const url = new URL(`/caixa/${caixa.id}`, window.location.origin).toString();
+      const imagem = await QRCode.toDataURL(url, {
+        width: 360,
+        margin: 2,
+        errorCorrectionLevel: 'H',
+      });
+      this.qrSelecionado.set({ caixa, imagem });
+    } catch (error) {
+      this.erro.set(error instanceof Error ? error.message : 'Não foi possível gerar o QR Code.');
+      this.fecharQr();
+    } finally {
+      this.gerandoQr.set(false);
+    }
+  }
+
+  fecharQr(): void {
+    this.qrSelecionado.set(undefined);
+    this.gerandoQr.set(false);
   }
 
   async abrirLeitor(): Promise<void> {

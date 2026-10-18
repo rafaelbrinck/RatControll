@@ -22,6 +22,8 @@ export interface ObservacaoCaixa {
   created_at: string;
   observacao: string;
   historico_id: number;
+  tipo_evento: string | null;
+  quantidade_filhos: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -187,8 +189,14 @@ export class CaixasService {
       throw new Error(error.message);
     }
 
+    const historico = data as HistoricoCaixa;
+    await this.inserirEventosSistema([{
+      historicoId: historico.id,
+      tipo: 'Início da reprodução',
+      observacao: `Ciclo reprodutivo iniciado. Previsão de encerramento: ${dataFim}.`,
+    }]);
     await this.atualizarStatusCaixa(caixaId, userId, true);
-    return data as HistoricoCaixa;
+    return historico;
   }
 
   async encerrarCiclo(caixaId: number, userId: string): Promise<void> {
@@ -209,6 +217,11 @@ export class CaixasService {
     }
 
     await this.atualizarStatusCaixa(caixaId, userId, false);
+    await this.inserirEventosSistema([{
+      historicoId: cicloAtivo.id,
+      tipo: 'Finalização da reprodução',
+      observacao: 'Ciclo reprodutivo encerrado manualmente.',
+    }]);
   }
 
   private async sincronizarStatus(caixas: Caixa[], userId: string): Promise<Caixa[]> {
@@ -271,6 +284,12 @@ export class CaixasService {
       for (const historico of invalidos) {
         historico.status = false;
       }
+
+      await this.inserirEventosSistema(invalidos.map((historico) => ({
+        historicoId: historico.id,
+        tipo: 'Finalização da reprodução',
+        observacao: 'Ciclo reprodutivo encerrado ao atingir a data prevista.',
+      })));
     }
 
     const ativosPorCaixa = new Map<number, number>();
@@ -335,6 +354,27 @@ export class CaixasService {
     this.caixas.update((caixas) => caixas.map((caixa) => caixasPorId.get(caixa.id) ?? caixa));
   }
 
+  private async inserirEventosSistema(
+    eventos: Array<{ historicoId: number; tipo: string; observacao: string }>,
+  ): Promise<void> {
+    if (!eventos.length) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('Observacoes_Caixas')
+      .insert(eventos.map((evento) => ({
+        historico_id: evento.historicoId,
+        tipo_evento: evento.tipo,
+        quantidade_filhos: 0,
+        observacao: evento.observacao,
+      })));
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
   async observacoes(historicoIds: number[]): Promise<ObservacaoCaixa[]> {
     if (!historicoIds.length) {
       return [];
@@ -342,7 +382,7 @@ export class CaixasService {
 
     const { data, error } = await supabase
       .from('Observacoes_Caixas')
-      .select('id, created_at, observacao, historico_id')
+      .select('id, created_at, observacao, historico_id, tipo_evento, quantidade_filhos')
       .in('historico_id', historicoIds)
       .order('created_at', { ascending: false });
 
@@ -366,15 +406,14 @@ export class CaixasService {
       throw new Error('Inicie um ciclo reprodutivo antes de registrar eventos nesta caixa.');
     }
 
-    const texto = [
-      `Evento: ${tipo}`,
-      quantidade !== undefined ? `Filhotes: ${quantidade}` : '',
-      detalhes.trim(),
-    ].filter(Boolean).join(' | ');
-
     const { error } = await supabase
       .from('Observacoes_Caixas')
-      .insert({ observacao: texto, historico_id: historicoAtivo.id });
+      .insert({
+        observacao: detalhes.trim(),
+        historico_id: historicoAtivo.id,
+        tipo_evento: tipo,
+        quantidade_filhos: quantidade ?? 0,
+      });
 
     if (error) {
       throw new Error(error.message);
