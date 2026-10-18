@@ -128,13 +128,21 @@ export class Dashboard implements OnDestroy {
 
   async abrirCaixaDoQr(value: string): Promise<void> {
     try {
-      const url = new URL(value, window.location.origin);
-      if (url.origin !== window.location.origin || !/^\/caixa\/\d+$/.test(url.pathname)) {
+      const conteudo = value.trim();
+      const url = new URL(conteudo, window.location.origin);
+      const rotaCaixa = url.pathname.match(/^\/caixa\/(\d+)\/?$/);
+
+      if (
+        !['http:', 'https:'].includes(url.protocol)
+        || url.username
+        || url.password
+        || !rotaCaixa
+      ) {
         this.erro.set('Este QR Code não pertence a uma caixa do RatControl.');
         return;
       }
 
-      await this.router.navigateByUrl(url.pathname);
+      await this.router.navigateByUrl(`/caixa/${rotaCaixa[1]}`);
     } catch {
       this.erro.set('O QR Code não contém um endereço válido.');
     }
