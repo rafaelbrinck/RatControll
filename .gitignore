@@ -11,6 +11,12 @@
 npm-debug.log
 yarn-error.log
 
+# Local environment and generated Supabase configuration
+.env
+.env.*
+!.env.example
+/src/app/core/data/supabase-environment.generated.mjs
+
 # IDEs and editors
 .idea/
 .project

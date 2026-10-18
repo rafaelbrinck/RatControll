@@ -1,0 +1,11 @@
+﻿@layer base {
+  body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background:
+      linear-gradient(135deg, #eef7f4 0%, #f8fafc 45%, #edf7ff 100%);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}

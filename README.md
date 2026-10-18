@@ -2,12 +2,20 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
 
+## Supabase environment
+
+Create a local `.env` from `.env.example` and set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. The `.env` file is ignored by Git.
+
+The `npm start`, `npm run build`, `npm run watch`, and `npm test` scripts generate a temporary Supabase configuration before running. On Vercel, add the same variables under **Project Settings > Environment Variables** and use `npm run build` as the build command.
+
+The publishable key is included in the browser bundle by design. Never use a Supabase `service_role` or `sb_secret` key in this Angular application; configure Row Level Security policies for all exposed tables.
+
 ## Development server
 
 To start a local development server, run:
 
 ```bash
-ng serve
+npm start
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
@@ -31,7 +39,7 @@ ng generate --help
 To build the project run:
 
 ```bash
-ng build
+npm run build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
@@ -41,7 +49,7 @@ This will compile your project and store the build artifacts in the `dist/` dire
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
 
 ```bash
-ng test
+npm test
 ```
 
 ## Running end-to-end tests
