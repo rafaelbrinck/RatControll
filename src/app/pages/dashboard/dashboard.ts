@@ -6,6 +6,7 @@ import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import QRCode from 'qrcode';
 import { Auth } from '../../core/auth/auth';
 import { Caixa, CaixasService } from '../../core/data/caixas';
+import { AppNavigation } from '../../shared/navigation/app-navigation';
 
 type FiltroStatus = 'Todas' | 'Ativas' | 'Livres';
 
@@ -17,7 +18,7 @@ interface QrCaixa {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AppNavigation],
   templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnDestroy {

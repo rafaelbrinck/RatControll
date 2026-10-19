@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Auth } from '../../core/auth/auth';
 import { Caixa, CaixasService, HistoricoCaixa, ObservacaoCaixa } from '../../core/data/caixas';
+import { AppNavigation } from '../../shared/navigation/app-navigation';
 
 type CategoriaEvento =
   | 'Início da reprodução'
@@ -23,7 +24,7 @@ interface RegistroHistorico extends ObservacaoCaixa {
 @Component({
   selector: 'app-caixa-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AppNavigation],
   templateUrl: './caixa.html',
 })
 export class CaixaPage {

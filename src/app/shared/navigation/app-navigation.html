@@ -1,0 +1,12 @@
+<nav aria-label="Navegação principal" class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-5 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur-lg sm:static sm:z-auto sm:w-auto sm:rounded-xl sm:border-0 sm:bg-slate-100 sm:p-1 sm:shadow-none sm:backdrop-blur-none">
+  <div class="mx-auto grid max-w-lg grid-cols-2 gap-2 sm:flex sm:max-w-none">
+    <a routerLink="/dashboard" routerLinkActive="bg-emerald-50 text-emerald-800 sm:bg-white sm:shadow-sm" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-4 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:min-h-10 sm:flex-row sm:gap-2 sm:px-4 sm:text-sm">
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+      <span>Caixas</span>
+    </a>
+    <a routerLink="/estoque" routerLinkActive="bg-emerald-50 text-emerald-800 sm:bg-white sm:shadow-sm" ariaCurrentWhenActive="page" class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-4 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:min-h-10 sm:flex-row sm:gap-2 sm:px-4 sm:text-sm">
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4-8-4Zm0 0v10l8 4 8-4V7M12 11v10m-8-9 8 4 8-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Estoque</span>
+    </a>
+  </div>
+</nav>

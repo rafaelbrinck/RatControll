@@ -1,17 +1,18 @@
 <main class="min-h-screen bg-[#f3f7f5] text-slate-900">
-  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-lg sm:px-8">
-    <div class="mx-auto flex max-w-3xl items-center justify-between gap-3">
+  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
       <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="Voltar ao painel">
         <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white">
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h11" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
         <span class="text-sm font-bold">Painel do biotério</span>
       </a>
+      <app-navigation />
       <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Sair</button>
     </div>
   </header>
 
-  <div class="mx-auto max-w-3xl px-4 pb-12 pt-6 sm:px-8 sm:pt-10">
+  <div class="mx-auto max-w-3xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-8 sm:pb-12 sm:pt-10">
     <div *ngIf="carregando()" class="py-16 text-center text-sm text-slate-500">Carregando dados da caixa...</div>
     <p *ngIf="erro()" role="alert" class="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ erro() }}</p>
 

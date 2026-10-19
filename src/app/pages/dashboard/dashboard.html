@@ -1,17 +1,18 @@
 <main class="min-h-screen bg-[#f3f7f5] text-slate-900">
-  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-lg sm:px-8">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
+  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
       <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="RatControl, início">
         <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white">
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 7.5A4.5 4.5 0 0 1 11.5 3h1A4.5 4.5 0 0 1 17 7.5V9a3.5 3.5 0 0 1-3.5 3.5h-7A3.5 3.5 0 0 1 3 9V7.5A4.5 4.5 0 0 1 7.5 3h1A4.5 4.5 0 0 1 7 7.5Z" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12.5h12v5A3.5 3.5 0 0 1 14.5 21h-5A3.5 3.5 0 0 1 6 17.5v-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
         <span><span class="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Biotério</span><span class="block text-sm font-bold">RatControl</span></span>
       </a>
+      <app-navigation />
       <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Sair</button>
     </div>
   </header>
 
-  <div class="mx-auto max-w-6xl px-4 pb-12 pt-7 sm:px-8 sm:pt-10">
+  <div class="mx-auto max-w-6xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:pb-12 sm:pt-10">
     <section class="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Operação do biotério</p>
