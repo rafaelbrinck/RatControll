@@ -30,6 +30,27 @@
       </div>
     </section>
 
+    <section *ngIf="ciclosVencidos().length" aria-labelledby="ciclos-vencidos-titulo" class="mb-8 overflow-hidden rounded-2xl border border-amber-300 bg-amber-50">
+      <div class="flex items-start gap-3 border-b border-amber-200 px-4 py-4 sm:px-5">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-200/70 text-amber-900">
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4m0 4h.01M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3l-7.5-13.1a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 id="ciclos-vencidos-titulo" class="font-bold text-amber-950">Atenção necessária</h2>
+            <span class="rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold text-amber-950">{{ ciclosVencidos().length }}</span>
+          </div>
+          <p class="mt-1 text-sm leading-5 text-amber-900">{{ ciclosVencidos().length === 1 ? 'Um ciclo passou da data prevista.' : 'Ciclos passaram das datas previstas.' }} Confira as caixas abaixo.</p>
+        </div>
+      </div>
+      <div class="divide-y divide-amber-200">
+        <a *ngFor="let ciclo of ciclosVencidos()" [routerLink]="['/caixa', ciclo.caixaId]" class="flex min-h-14 items-center justify-between gap-3 px-4 py-3 transition hover:bg-amber-100/70 sm:px-5">
+          <span class="min-w-0"><span class="block text-sm font-semibold text-amber-950">Caixa {{ ciclo.numeroCaixa }}</span><span class="mt-0.5 block text-xs text-amber-900">Previsão: {{ ciclo.dataFim | date:'dd/MM/yyyy' }}</span></span>
+          <span class="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-amber-950">Ver caixa<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h13m-5-5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </a>
+      </div>
+    </section>
+
     <section class="mb-8 grid grid-cols-3 divide-x divide-slate-200 border-y border-slate-200 bg-white/60 py-4" aria-label="Resumo das caixas">
       <div class="px-3 sm:px-5"><p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">Total</p><p class="mt-1 text-2xl font-bold tabular-nums">{{ caixas().length }}</p></div>
       <div class="px-3 sm:px-5"><p class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-800 sm:text-xs"><span class="h-2 w-2 rounded-full bg-emerald-600"></span>Em ciclo</p><p class="mt-1 text-2xl font-bold tabular-nums">{{ totalAtivas() }}</p></div>

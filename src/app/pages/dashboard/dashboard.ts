@@ -29,6 +29,7 @@ export class Dashboard implements OnDestroy {
   private scannerControls?: IScannerControls;
 
   readonly caixas = this.caixasService.caixas;
+  readonly ciclosVencidos = this.caixasService.ciclosVencidos;
   readonly busca = signal('');
   readonly filtroStatus = signal<FiltroStatus>('Todas');
   readonly formularioCaixaAberto = signal(false);

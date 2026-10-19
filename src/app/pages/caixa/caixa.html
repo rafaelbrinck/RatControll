@@ -37,13 +37,36 @@
           </div>
           <button type="button" (click)="encerrarCiclo()" [disabled]="salvandoCiclo()" class="min-h-11 rounded-xl border border-emerald-800/20 bg-white px-4 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60">{{ salvandoCiclo() ? 'Atualizando...' : 'Encerrar ciclo' }}</button>
         </div>
+        <div *ngIf="cicloVencido()" role="status" class="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-100 px-4 py-3 text-amber-950">
+          <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4m0 4h.01M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3l-7.5-13.1a2 2 0 0 0-3.4 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><p class="text-sm font-bold">Previsão de encerramento ultrapassada</p><p class="mt-1 text-xs leading-5">O ciclo continua aberto. Encerre-o manualmente após conferir a situação da caixa.</p></div>
+        </div>
       </section>
 
       <section *ngIf="!cicloAtivo()" class="mb-7 rounded-3xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Caixa inativa</p>
-        <h2 class="mt-2 text-lg font-bold text-slate-900">Nenhum ciclo reprodutivo em andamento</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-700">Ao colocar o casal para procriar, inicie um ciclo. A previsão de término será calculada para oito meses.</p>
-        <button type="button" (click)="iniciarCiclo()" [disabled]="salvandoCiclo()" class="mt-4 min-h-12 rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvandoCiclo() ? 'Iniciando ciclo...' : 'Iniciar ciclo reprodutivo' }}</button>
+        <h2 class="mt-2 text-lg font-bold text-slate-900">Iniciar ciclo reprodutivo</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-700">Defina o período do casal nesta caixa.</p>
+
+        <form (ngSubmit)="iniciarCiclo()" class="mt-5 space-y-5">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label for="dataInicioCiclo" class="block text-sm font-semibold text-slate-700">Data de início
+              <input id="dataInicioCiclo" name="dataInicioCiclo" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="dd/mm/aaaa" [ngModel]="dataInicioTexto()" (ngModelChange)="alterarDataInicioCiclo($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-amber-200 bg-white px-3 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
+            </label>
+            <label for="dataFimCiclo" class="block text-sm font-semibold text-slate-700">Previsão de encerramento
+              <input id="dataFimCiclo" name="dataFimCiclo" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="dd/mm/aaaa" [ngModel]="dataFimTexto()" (ngModelChange)="alterarDataFimCiclo($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-amber-200 bg-white px-3 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
+            </label>
+          </div>
+
+          <fieldset>
+            <legend class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Duração rápida</legend>
+            <div class="grid grid-cols-3 gap-2">
+              <button *ngFor="let meses of duracoesCiclo" type="button" (click)="selecionarDuracaoCiclo(meses)" [attr.aria-pressed]="duracaoSelecionada() === meses" [ngClass]="duracaoSelecionada() === meses ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'" class="min-h-11 rounded-xl border text-sm font-semibold transition">{{ meses }} meses</button>
+            </div>
+          </fieldset>
+
+          <button type="submit" [disabled]="salvandoCiclo()" class="min-h-12 w-full rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvandoCiclo() ? 'Iniciando ciclo...' : 'Iniciar ciclo' }}</button>
+        </form>
       </section>
 
       <section *ngIf="cicloAtivo()" class="mb-7 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -58,6 +81,14 @@
 
           <label *ngIf="eventoUsaQuantidade" for="quantidadeFilhotes" class="block text-sm font-semibold text-slate-700">Quantidade de filhotes <span *ngIf="tipoEvento !== 'Nascimento'" class="font-normal text-slate-500">(opcional)</span>
             <input id="quantidadeFilhotes" name="quantidadeFilhotes" type="number" min="0" max="32767" step="1" [(ngModel)]="quantidadeFilhotes" placeholder="Ex.: 8" class="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100" />
+          </label>
+
+          <label *ngIf="eventoUsaResultado" for="statusResultado" class="block text-sm font-semibold text-slate-700">Avaliação do resultado <span class="font-normal text-slate-500">(opcional)</span>
+            <select id="statusResultado" name="statusResultado" [(ngModel)]="statusResultado" class="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100">
+              <option [ngValue]="null">Sem avaliação</option>
+              <option [ngValue]="true">Bom</option>
+              <option [ngValue]="false">Ruim</option>
+            </select>
           </label>
 
           <label for="detalhesEvento" class="block text-sm font-semibold text-slate-700">Detalhes <span class="font-normal text-slate-500">({{ eventoExigeDetalhes ? 'obrigatório para este evento' : 'opcional' }})</span>
@@ -101,6 +132,7 @@
                   <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-sm font-bold shadow-sm" aria-hidden="true">{{ registro.categoria.slice(0, 1) }}</span>
                   <div class="min-w-0">
                     <span class="inline-flex rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">{{ registro.categoria }}</span>
+                    <span *ngIf="registro.status !== null && (registro.categoria === 'Nascimento' || registro.categoria === 'Desmame')" [ngClass]="registro.status ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'" class="ml-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">{{ registro.status ? 'Bom' : 'Ruim' }}</span>
                     <p *ngIf="registro.detalhes" class="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-700">{{ registro.detalhes }}</p>
                   </div>
                 </div>

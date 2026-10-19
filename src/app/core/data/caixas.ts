@@ -24,11 +24,20 @@ export interface ObservacaoCaixa {
   historico_id: number;
   tipo_evento: string | null;
   quantidade_filhos: number | null;
+  status: boolean | null;
+}
+
+export interface CicloVencido {
+  historicoId: number;
+  caixaId: number;
+  numeroCaixa: number;
+  dataFim: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class CaixasService {
   readonly caixas = signal<Caixa[]>([]);
+  readonly ciclosVencidos = signal<CicloVencido[]>([]);
   readonly carregando = signal(false);
   readonly erro = signal<string | null>(null);
 
@@ -81,6 +90,7 @@ export class CaixasService {
     this.dataUltimaSincronizacao = null;
     this.requisicao = undefined;
     this.caixas.set([]);
+    this.ciclosVencidos.set([]);
     this.carregando.set(false);
     this.erro.set(null);
   }
@@ -95,6 +105,7 @@ export class CaixasService {
     this.dataUltimaSincronizacao = null;
     this.requisicao = undefined;
     this.caixas.set([]);
+    this.ciclosVencidos.set([]);
     this.erro.set(null);
     this.carregando.set(false);
   }
@@ -166,14 +177,24 @@ export class CaixasService {
     return sincronizados.historicos;
   }
 
-  async iniciarCiclo(caixaId: number, userId: string): Promise<HistoricoCaixa> {
+  async iniciarCiclo(
+    caixaId: number,
+    userId: string,
+    dataInicio: string,
+    dataFim: string,
+  ): Promise<HistoricoCaixa> {
+    if (!this.dataValida(dataInicio) || !this.dataValida(dataFim)) {
+      throw new Error('Informe datas válidas para o ciclo reprodutivo.');
+    }
+    if (dataFim <= dataInicio) {
+      throw new Error('A data de encerramento deve ser posterior à data de início.');
+    }
+
     const historicos = await this.historicos(caixaId, userId);
-    if (historicos.some((historico) => this.cicloEstaAtivo(historico, this.hoje()))) {
+    if (historicos.some((historico) => this.cicloEstaAtivo(historico))) {
       throw new Error('Esta caixa já possui um ciclo reprodutivo ativo.');
     }
 
-    const dataInicio = this.hoje();
-    const dataFim = this.somarOitoMeses(dataInicio);
     const { data, error } = await supabase
       .from('Historico_Caixas')
       .insert({
@@ -201,7 +222,7 @@ export class CaixasService {
 
   async encerrarCiclo(caixaId: number, userId: string): Promise<void> {
     const historicos = await this.historicos(caixaId, userId);
-    const cicloAtivo = historicos.find((historico) => this.cicloEstaAtivo(historico, this.hoje()));
+    const cicloAtivo = historicos.find((historico) => this.cicloEstaAtivo(historico));
     if (!cicloAtivo) {
       throw new Error('Esta caixa não possui ciclo reprodutivo ativo.');
     }
@@ -247,14 +268,12 @@ export class CaixasService {
     historicos: HistoricoCaixa[],
     userId: string,
   ): Promise<{ caixas: Caixa[]; historicos: HistoricoCaixa[] }> {
-    const today = this.hoje();
-
     for (const historico of historicos) {
       if (historico.data_fim) {
         continue;
       }
 
-      const dataFim = this.somarOitoMeses(historico.data_inicio);
+      const dataFim = this.somarMeses(historico.data_inicio, 8);
       const { error } = await supabase
         .from('Historico_Caixas')
         .update({ data_fim: dataFim })
@@ -267,34 +286,24 @@ export class CaixasService {
       historico.data_fim = dataFim;
     }
 
-    const invalidos = historicos.filter((historico) =>
-      historico.status && !this.cicloEstaAtivo(historico, today),
-    );
-    if (invalidos.length) {
-      const { error } = await supabase
-        .from('Historico_Caixas')
-        .update({ status: false })
-        .in('id', invalidos.map((historico) => historico.id))
-        .eq('status', true);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      for (const historico of invalidos) {
-        historico.status = false;
-      }
-
-      await this.inserirEventosSistema(invalidos.map((historico) => ({
-        historicoId: historico.id,
-        tipo: 'Finalização da reprodução',
-        observacao: 'Ciclo reprodutivo encerrado ao atingir a data prevista.',
-      })));
-    }
-
     const ativosPorCaixa = new Map<number, number>();
+    const caixasPorId = new Map(caixas.map((caixa) => [caixa.id, caixa]));
+    const vencidosDesteLote = historicos.flatMap((historico) => {
+      const caixa = caixasPorId.get(historico.caixa_id);
+      if (!historico.status || !historico.data_fim || historico.data_fim >= this.hoje() || !caixa) {
+        return [];
+      }
+
+      return [{
+        historicoId: historico.id,
+        caixaId: caixa.id,
+        numeroCaixa: caixa.numero,
+        dataFim: historico.data_fim,
+      }];
+    });
+
     for (const historico of historicos) {
-      if (!this.cicloEstaAtivo(historico, today)) {
+      if (!this.cicloEstaAtivo(historico)) {
         continue;
       }
 
@@ -309,6 +318,12 @@ export class CaixasService {
       ...caixa,
       status: (ativosPorCaixa.get(caixa.id) ?? 0) > 0,
     }));
+
+    const idsSincronizados = new Set(caixas.map((caixa) => caixa.id));
+    this.ciclosVencidos.update((atuais) => [
+      ...atuais.filter((ciclo) => !idsSincronizados.has(ciclo.caixaId)),
+      ...vencidosDesteLote,
+    ].sort((a, b) => a.dataFim.localeCompare(b.dataFim)));
 
     for (const status of [true, false]) {
       const ids = atualizadas
@@ -367,6 +382,7 @@ export class CaixasService {
         historico_id: evento.historicoId,
         tipo_evento: evento.tipo,
         quantidade_filhos: 0,
+        status: null,
         observacao: evento.observacao,
       })));
 
@@ -382,7 +398,7 @@ export class CaixasService {
 
     const { data, error } = await supabase
       .from('Observacoes_Caixas')
-      .select('id, created_at, observacao, historico_id, tipo_evento, quantidade_filhos')
+      .select('id, created_at, observacao, historico_id, tipo_evento, quantidade_filhos, status')
       .in('historico_id', historicoIds)
       .order('created_at', { ascending: false });
 
@@ -399,9 +415,10 @@ export class CaixasService {
     tipo: string,
     quantidade: number | undefined,
     detalhes: string,
+    status: boolean | null,
   ): Promise<void> {
     const historicos = await this.historicos(caixaId, userId);
-    const historicoAtivo = historicos.find((historico) => this.cicloEstaAtivo(historico, this.hoje()));
+    const historicoAtivo = historicos.find((historico) => this.cicloEstaAtivo(historico));
     if (!historicoAtivo) {
       throw new Error('Inicie um ciclo reprodutivo antes de registrar eventos nesta caixa.');
     }
@@ -413,6 +430,7 @@ export class CaixasService {
         historico_id: historicoAtivo.id,
         tipo_evento: tipo,
         quantidade_filhos: quantidade ?? 0,
+        status,
       });
 
     if (error) {
@@ -420,11 +438,25 @@ export class CaixasService {
     }
   }
 
-  private cicloEstaAtivo(historico: HistoricoCaixa, hoje: string): boolean {
-    return historico.status
-      && historico.data_inicio <= hoje
-      && !!historico.data_fim
-      && historico.data_fim >= hoje;
+  private cicloEstaAtivo(historico: HistoricoCaixa): boolean {
+    return historico.status;
+  }
+
+  private dataValida(data: string): boolean {
+    const correspondencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data);
+    if (!correspondencia) {
+      return false;
+    }
+
+    const [, anoTexto, mesTexto, diaTexto] = correspondencia;
+    const ano = Number(anoTexto);
+    const mes = Number(mesTexto);
+    const dia = Number(diaTexto);
+    const valida = new Date(Date.UTC(ano, mes - 1, dia));
+
+    return valida.getUTCFullYear() === ano
+      && valida.getUTCMonth() === mes - 1
+      && valida.getUTCDate() === dia;
   }
 
   private hoje(): string {
@@ -435,9 +467,9 @@ export class CaixasService {
     return `${ano}-${mes}-${dia}`;
   }
 
-  private somarOitoMeses(data: string): string {
+  somarMeses(data: string, meses: number): string {
     const [ano, mes, dia] = data.split('-').map(Number);
-    const mesAlvo = new Date(Date.UTC(ano, mes - 1 + 8, 1));
+    const mesAlvo = new Date(Date.UTC(ano, mes - 1 + meses, 1));
     const ultimoDia = new Date(Date.UTC(mesAlvo.getUTCFullYear(), mesAlvo.getUTCMonth() + 1, 0)).getUTCDate();
     const dataAlvo = new Date(Date.UTC(
       mesAlvo.getUTCFullYear(),
