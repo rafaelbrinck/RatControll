@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Auth } from '../../core/auth/auth';
 import { Cliente, ClientesService, DadosCliente } from '../../core/data/clientes';
+import { Animal, AnimaisService } from '../../core/data/animais';
 import { EstoqueService, ItemEstoque } from '../../core/data/estoque';
 import { FinalizarVendaError, VendasService } from '../../core/data/vendas';
 import { VendasPage } from './vendas';
@@ -15,7 +16,13 @@ describe('VendasPage', () => {
     quantidade: 8,
     descricao: 'Rato Wistar',
     valor: 12,
-    tipo_animal: 'Wistar',
+    animal_id: 1,
+  };
+  const animal: Animal = {
+    id: 1,
+    nome: 'Wistar',
+    created_at: '2026-10-20T12:00:00.000Z',
+    user_id: 'user-1',
   };
   const cliente: Cliente = {
     id: '42',
@@ -77,6 +84,13 @@ describe('VendasPage', () => {
           },
         },
         { provide: EstoqueService, useValue: estoqueStub },
+        {
+          provide: AnimaisService,
+          useValue: {
+            animais: signal([animal]),
+            listar: vi.fn().mockResolvedValue([animal]),
+          },
+        },
         { provide: VendasService, useValue: vendasStub },
         { provide: ClientesService, useValue: clientesStub },
       ],

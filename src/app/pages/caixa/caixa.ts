@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Auth } from '../../core/auth/auth';
+import { Animal, AnimaisService } from '../../core/data/animais';
 import { Caixa, CaixasService, HistoricoCaixa, ObservacaoCaixa } from '../../core/data/caixas';
 import { AppNavigation } from '../../shared/navigation/app-navigation';
 
@@ -30,10 +31,13 @@ interface RegistroHistorico extends ObservacaoCaixa {
 export class CaixaPage {
   private readonly auth = inject(Auth);
   private readonly caixasService = inject(CaixasService);
+  private readonly animaisService = inject(AnimaisService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   readonly caixa = signal<Caixa | undefined>(undefined);
+  readonly animais = this.animaisService.animais;
+  readonly animalIdSelecionado = signal<number | null>(null);
   readonly historicos = signal<HistoricoCaixa[]>([]);
   readonly observacoes = signal<ObservacaoCaixa[]>([]);
   readonly filtroHistorico = signal<'Todos' | CategoriaEvento>('Todos');
@@ -63,6 +67,8 @@ export class CaixaPage {
   readonly carregando = signal(true);
   readonly salvando = signal(false);
   readonly salvandoCiclo = signal(false);
+  readonly salvandoAnimal = signal(false);
+  readonly existeAnimal = signal(false);
   readonly erro = signal('');
   readonly duracoesCiclo = [4, 6, 8];
   readonly dataInicioPadrao = this.dataHoje();
@@ -150,13 +156,20 @@ export class CaixaPage {
     this.erro.set('');
 
     try {
-      const caixa = await this.caixasService.buscar(caixaId, userId);
+      const [caixa] = await Promise.all([
+        this.caixasService.buscar(caixaId, userId),
+        this.animaisService.listar(userId),
+      ]);
       this.caixa.set(caixa);
       if (!caixa) {
         this.erro.set('Esta caixa não existe ou não está disponível para sua conta.');
         return;
       }
 
+      this.animalIdSelecionado.set(caixa.animal_id);
+      if(caixa.animal_id != null){
+        this.existeAnimal.set(true)
+      }
       const historicos = await this.caixasService.historicos(caixaId, userId);
       this.historicos.set(historicos);
       this.caixa.set({ ...caixa, status: historicos.some((historico) => historico.status) });
@@ -172,6 +185,10 @@ export class CaixaPage {
     const caixa = this.caixa();
     const userId = this.auth.getUserLogado();
     if (!caixa || !userId || this.cicloAtivo()) {
+      return;
+    }
+    if (caixa.animal_id === null) {
+      this.erro.set('Vincule um animal a esta caixa antes de iniciar o ciclo.');
       return;
     }
 
@@ -221,6 +238,42 @@ export class CaixaPage {
     } finally {
       this.salvandoCiclo.set(false);
     }
+  }
+
+  async salvarAnimal(): Promise<void> {
+    const caixa = this.caixa();
+    const userId = this.auth.getUserLogado();
+    const animalId = this.animalIdSelecionado();
+    if (!caixa || !userId) {
+      return;
+    }
+    if (animalId === null) {
+      this.erro.set('Selecione um animal cadastrado para esta caixa.');
+      return;
+    }
+    if (caixa.animal_id === animalId) {
+      return;
+    }
+
+    this.salvandoAnimal.set(true);
+    this.erro.set('');
+    try {
+      const atualizada = await this.caixasService.vincularAnimal(caixa.id, userId, animalId);
+      this.caixa.update((atual) => atual ? { ...atual, animal_id: atualizada.animal_id } : atualizada);
+    } catch (error) {
+      this.animalIdSelecionado.set(caixa.animal_id);
+      this.erro.set(error instanceof Error ? error.message : 'Não foi possível vincular o animal.');
+    } finally {
+      this.salvandoAnimal.set(false);
+    }
+  }
+
+  animalNome(animalId: number | null): string {
+    return this.animais().find((animal) => animal.id === animalId)?.nome ?? 'Animal não vinculado';
+  }
+
+  identificarAnimal(_index: number, animal: Animal): number {
+    return animal.id;
   }
 
   async registrar(): Promise<void> {

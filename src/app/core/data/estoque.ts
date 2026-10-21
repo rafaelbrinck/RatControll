@@ -1,18 +1,20 @@
 import { Injectable, signal } from '@angular/core';
+import { inject } from '@angular/core';
 import { supabase } from './supabase';
+import { AnimaisService } from './animais';
 
 export interface ItemEstoque {
   id: number;
   created_at: string;
   user_id: string;
+  animal_id: number | null;
   quantidade: number;
   descricao: string | null;
   valor: number | null;
-  tipo_animal: string | null;
 }
 
 export interface NovoItemEstoque {
-  tipoAnimal: string;
+  animalId: number;
   descricao: string;
   quantidade: number;
   valorUnitario: number;
@@ -23,10 +25,12 @@ export interface ResultadoCadastroEstoque {
   acrescentado: boolean;
 }
 
-const COLUNAS_ESTOQUE = 'id, created_at, user_id, quantidade, descricao, valor, tipo_animal';
+const COLUNAS_ESTOQUE = 'id, created_at, user_id, animal_id, quantidade, descricao, valor';
 
 @Injectable({ providedIn: 'root' })
 export class EstoqueService {
+  private readonly animaisService = inject(AnimaisService);
+
   readonly itens = signal<ItemEstoque[]>([]);
   readonly carregando = signal(false);
 
@@ -80,9 +84,14 @@ export class EstoqueService {
 
   async criarOuAcrescentar(userId: string, novoItem: NovoItemEstoque): Promise<ResultadoCadastroEstoque> {
     this.validarNovoItem(novoItem);
+    const animais = await this.animaisService.listar(userId);
+    if (!animais.some((animal) => animal.id === novoItem.animalId && animal.user_id === userId)) {
+      throw new Error('Selecione um animal cadastrado na sua conta.');
+    }
+
     const existentes = await this.listar(userId);
     const itemExistente = existentes.find((item) =>
-      (item.tipo_animal ?? '').trim().toLocaleLowerCase('pt-BR') === novoItem.tipoAnimal.trim().toLocaleLowerCase('pt-BR')
+      item.animal_id === novoItem.animalId
       && (item.descricao ?? '').trim().toLocaleLowerCase('pt-BR') === novoItem.descricao.trim().toLocaleLowerCase('pt-BR'),
     );
 
@@ -91,10 +100,10 @@ export class EstoqueService {
         .from('Estoque')
         .insert({
           user_id: userId,
+          animal_id: novoItem.animalId,
           quantidade: novoItem.quantidade,
           descricao: novoItem.descricao.trim(),
           valor: novoItem.valorUnitario,
-          tipo_animal: novoItem.tipoAnimal.trim(),
         })
         .select(COLUNAS_ESTOQUE)
         .single();
@@ -143,7 +152,7 @@ export class EstoqueService {
       .from('Estoque')
       .select(COLUNAS_ESTOQUE)
       .eq('user_id', userId)
-      .order('tipo_animal', { ascending: true })
+      .order('animal_id', { ascending: true })
       .order('descricao', { ascending: true });
 
     if (error) {
@@ -181,7 +190,7 @@ export class EstoqueService {
       return substituido
         ? itens.map((atual) => atual.id === item.id ? item : atual)
         : [...itens, item].sort((a, b) =>
-          (a.tipo_animal ?? '').localeCompare(b.tipo_animal ?? '', 'pt-BR')
+          (a.animal_id ?? 0) - (b.animal_id ?? 0)
           || (a.descricao ?? '').localeCompare(b.descricao ?? '', 'pt-BR'),
         );
     });
@@ -202,8 +211,8 @@ export class EstoqueService {
   }
 
   private validarNovoItem(item: NovoItemEstoque): void {
-    if (!item.tipoAnimal.trim() || !item.descricao.trim()) {
-      throw new Error('Informe o tipo de animal e a descrição do produto.');
+    if (!Number.isSafeInteger(item.animalId) || item.animalId < 1 || !item.descricao.trim()) {
+      throw new Error('Selecione o animal e informe a descrição do produto.');
     }
     this.validarQuantidade(item.quantidade);
     if (!Number.isFinite(item.valorUnitario) || item.valorUnitario < 0) {

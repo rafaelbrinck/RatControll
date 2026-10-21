@@ -1,18 +1,18 @@
 <main class="min-h-screen bg-[#f3f7f5] text-slate-900">
   <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 sm:px-8">
-    <div class="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-      <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="Voltar ao painel">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="RatControl, início">
         <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 7.5A4.5 4.5 0 0 1 11.5 3h1A4.5 4.5 0 0 1 17 7.5V9a3.5 3.5 0 0 1-3.5 3.5h-7A3.5 3.5 0 0 1 3 9V7.5A4.5 4.5 0 0 1 7.5 3h1A4.5 4.5 0 0 1 7 7.5Z" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12.5h12v5A3.5 3.5 0 0 1 14.5 21h-5A3.5 3.5 0 0 1 6 17.5v-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
-        <span class="text-sm font-bold">Painel do biotério</span>
+        <span><span class="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Biotério</span><span class="block text-sm font-bold">RatControl</span></span>
       </a>
       <app-navigation />
-      <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Sair</button>
+      <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Sair</button>
     </div>
   </header>
 
-  <div class="mx-auto max-w-3xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-8 sm:pb-12 sm:pt-10">
+  <div class="mx-auto max-w-6xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:pb-12 sm:pt-10">
     <div *ngIf="carregando()" class="py-16 text-center text-sm text-slate-500">Carregando dados da caixa...</div>
     <p *ngIf="erro()" role="alert" class="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ erro() }}</p>
 
@@ -20,7 +20,7 @@
       <section class="mb-6 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-6 text-white shadow-lg sm:p-8">
         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200">Ficha da caixa</p>
         <div class="mt-3 flex items-end justify-between gap-4">
-          <div><h1 class="text-3xl font-bold">Caixa {{ caixaAtual.numero }}</h1><p class="mt-2 text-sm text-slate-300">Registros de manejo e eventos</p></div>
+          <div><h1 class="text-3xl font-bold">Caixa {{ caixaAtual.numero }}</h1><p class="mt-2 text-sm text-slate-300">{{ animalNome(caixaAtual.animal_id) }} </p></div>
           <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold">{{ caixaAtual.status ? 'Ativa' : 'Inativa' }}</span>
         </div>
         <div class="mt-6 flex flex-wrap gap-2 text-xs text-slate-300">
@@ -29,11 +29,27 @@
         </div>
       </section>
 
+      <section class="mb-7 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" *ngIf="!this.existeAnimal">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Animal da caixa</p>
+        <h2 class="mt-2 text-xl font-bold">Qual animal está nesta caixa?</h2>
+        <p class="mt-2 text-sm text-slate-600">O vínculo vale para o ciclo atual e para os próximos registros desta caixa.</p>
+        <form *ngIf="animais().length" (ngSubmit)="salvarAnimal()" class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <label for="animalDaCaixa" class="block text-sm font-semibold text-slate-700">Animal
+            <select id="animalDaCaixa" name="animalDaCaixa" [ngModel]="animalIdSelecionado()" (ngModelChange)="animalIdSelecionado.set($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-base font-normal outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100">
+              <option *ngFor="let animal of animais(); trackBy: identificarAnimal" [ngValue]="animal.id">{{ animal.nome }}</option>
+            </select>
+          </label>
+          <button type="submit" [disabled]="salvandoAnimal() || animalIdSelecionado() === caixaAtual.animal_id" class="min-h-12 rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvandoAnimal() ? 'Salvando...' : 'Salvar animal' }}</button>
+        </form>
+        <p *ngIf="!animais().length" class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Cadastre um animal para vincular esta caixa. <a routerLink="/animais" class="font-semibold underline">Ir para Animais</a></p>
+      </section>
+
       <section *ngIf="cicloAtivo() as ciclo" class="mb-7 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
         <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">Ciclo reprodutivo ativo</p>
-            <p class="mt-2 text-sm text-slate-700">Início: <strong>{{ ciclo.data_inicio | date:'dd/MM/yyyy' }}</strong></p>
+            <p class="mt-2 text-sm text-slate-700">Animal: <strong>{{ animalNome(caixaAtual.animal_id) }}</strong></p>
+            <p class="mt-1 text-sm text-slate-700">Início: <strong>{{ ciclo.data_inicio | date:'dd/MM/yyyy' }}</strong></p>
             <p class="mt-1 text-sm text-slate-700">Previsão de encerramento: <strong>{{ ciclo.data_fim | date:'dd/MM/yyyy' }}</strong></p>
           </div>
           <button type="button" (click)="encerrarCiclo()" [disabled]="salvandoCiclo()" class="min-h-11 rounded-xl border border-emerald-800/20 bg-white px-4 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60">{{ salvandoCiclo() ? 'Atualizando...' : 'Encerrar ciclo' }}</button>
@@ -47,7 +63,7 @@
       <section *ngIf="!cicloAtivo()" class="mb-7 rounded-3xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">Caixa inativa</p>
         <h2 class="mt-2 text-lg font-bold text-slate-900">Iniciar ciclo reprodutivo</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-700">Defina o período do casal nesta caixa.</p>
+        <p class="mt-2 text-sm leading-6 text-slate-700">Defina o período do casal de <strong>{{ animalNome(caixaAtual.animal_id) }}</strong> nesta caixa.</p>
 
         <form (ngSubmit)="iniciarCiclo()" class="mt-5 space-y-5">
           <div class="grid gap-4 sm:grid-cols-2">
@@ -66,7 +82,8 @@
             </div>
           </fieldset>
 
-          <button type="submit" [disabled]="salvandoCiclo()" class="min-h-12 w-full rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvandoCiclo() ? 'Iniciando ciclo...' : 'Iniciar ciclo' }}</button>
+          <p *ngIf="caixaAtual.animal_id === null" class="rounded-lg bg-amber-100 px-3 py-2 text-sm text-amber-950">Vincule um animal a esta caixa antes de iniciar o ciclo.</p>
+          <button type="submit" [disabled]="salvandoCiclo() || caixaAtual.animal_id === null" class="min-h-12 w-full rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvandoCiclo() ? 'Iniciando ciclo...' : 'Iniciar ciclo' }}</button>
         </form>
       </section>
 

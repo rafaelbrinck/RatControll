@@ -47,7 +47,7 @@
         <button *ngIf="!buscaAplicada() && status() !== 'inativos'" type="button" (click)="abrirNovo()" class="mt-4 min-h-10 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white">Cadastrar cliente</button>
       </div>
 
-      <div *ngIf="!carregando() && !erro() && clientes().length" class="-mx-4 overflow-x-auto sm:mx-0">
+      <div *ngIf="!carregando() && !erro() && clientes().length" class="overflow-x-auto sm:mx-0">
         <table class="hidden w-full min-w-[900px] text-left text-sm md:table">
           <thead class="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Nome</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Documento</th><th class="px-4 py-3">Telefone</th><th class="px-4 py-3">E-mail</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Ações</th></tr></thead>
           <tbody class="divide-y divide-slate-100">

@@ -37,7 +37,8 @@
           </label>
           <label class="sr-only" for="filtroAnimal">Filtrar por tipo de animal</label>
           <select id="filtroAnimal" name="filtroAnimal" [ngModel]="filtroAnimal()" (ngModelChange)="filtroAnimal.set($event)" class="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100">
-            <option *ngFor="let tipo of tiposAnimal()" [ngValue]="tipo">{{ tipo }}</option>
+            <option [ngValue]="null">Todos os animais</option>
+            <option *ngFor="let animal of animais(); trackBy: identificarAnimal" [ngValue]="animal.id">{{ animal.nome }}</option>
           </select>
         </div>
       </div>
@@ -49,7 +50,7 @@
       <div *ngIf="!carregando() && gruposFiltrados().length" class="space-y-4">
         <section *ngFor="let grupo of gruposFiltrados()" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-4 py-3 sm:px-5">
-            <h3 class="font-bold text-slate-900">{{ grupo.tipoAnimal }}</h3>
+            <h3 class="font-bold text-slate-900">{{ grupo.nomeAnimal }}</h3>
             <span class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600">{{ grupo.itens.length }} {{ grupo.itens.length === 1 ? 'faixa' : 'faixas' }}</span>
           </header>
           <div class="divide-y divide-slate-100">
@@ -58,7 +59,7 @@
                 <div class="flex flex-wrap items-center gap-2"><h4 class="font-semibold text-slate-900">{{ item.descricao || 'Sem descrição' }}</h4><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">{{ item.quantidade }} un.</span></div>
                 <!-- <p class="mt-1 text-xs text-slate-500"><ng-container *ngIf="item.valor != null; else valorAusente">{{ item.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} por unidade</ng-container><ng-template #valorAusente>Valor unitário não informado</ng-template></p> -->
               </div>
-              <button type="button" (click)="abrirReposicao(item)" [attr.aria-label]="'Adicionar quantidade a ' + grupo.tipoAnimal + ', ' + (item.descricao || 'faixa')" class="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50 sm:min-h-11 sm:gap-2 sm:px-3 sm:text-sm"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg><span class="hidden sm:inline">Adicionar</span></button>
+              <button type="button" (click)="abrirReposicao(item)" [attr.aria-label]="'Adicionar quantidade a ' + grupo.nomeAnimal + ', ' + (item.descricao || 'faixa')" class="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50 sm:min-h-11 sm:gap-2 sm:px-3 sm:text-sm"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg><span class="hidden sm:inline">Adicionar</span></button>
             </article>
           </div>
         </section>
@@ -82,7 +83,7 @@
       <div class="mb-5 flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Estoque do biotério</p><h2 id="estoque-modal-titulo" class="mt-1 text-xl font-bold">{{ itemParaRepor() ? 'Acrescentar quantidade' : 'Cadastrar item' }}</h2></div><button type="button" (click)="fecharModal()" aria-label="Fechar" class="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-slate-500 hover:bg-slate-100">&times;</button></div>
 
       <ng-container *ngIf="itemParaRepor() as item; else formularioNovoItem">
-        <div class="mb-5 rounded-xl bg-slate-50 p-4"><p class="font-semibold text-slate-900">{{ item.tipo_animal || 'Animal não informado' }}</p><p class="mt-1 text-sm text-slate-600">{{ item.descricao || 'Sem descrição' }}</p><p class="mt-2 text-xs text-slate-500">Quantidade atual: <strong class="text-slate-800">{{ item.quantidade }}</strong></p></div>
+        <div class="mb-5 rounded-xl bg-slate-50 p-4"><p class="font-semibold text-slate-900">{{ nomeAnimal(item.animal_id) }}</p><p class="mt-1 text-sm text-slate-600">{{ item.descricao || 'Sem descrição' }}</p><p class="mt-2 text-xs text-slate-500">Quantidade atual: <strong class="text-slate-800">{{ item.quantidade }}</strong></p></div>
         <form (ngSubmit)="salvarReposicao()" class="space-y-4">
           <label for="quantidadeReposicao" class="block text-sm font-semibold text-slate-700">Quantidade a acrescentar<input id="quantidadeReposicao" name="quantidadeReposicao" type="number" min="1" max="32767" step="1" [ngModel]="quantidadeReposicao()" (ngModelChange)="quantidadeReposicao.set($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" /></label>
           <p *ngIf="erro()" role="alert" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ erro() }}</p>
@@ -92,23 +93,17 @@
 
       <ng-template #formularioNovoItem>
         <form (ngSubmit)="salvarNovoItem()" class="space-y-4">
-          <div *ngIf="tiposAnimal().length > 1" class="grid grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Escolha animal existente ou novo">
-            <button type="button" (click)="modoTipoAnimal.set('existente')" [attr.aria-pressed]="modoTipoAnimal() === 'existente'" [ngClass]="modoTipoAnimal() === 'existente' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'" class="min-h-10 rounded-lg px-2 text-xs font-semibold transition">Animal existente</button>
-            <button type="button" (click)="modoTipoAnimal.set('novo')" [attr.aria-pressed]="modoTipoAnimal() === 'novo'" [ngClass]="modoTipoAnimal() === 'novo' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'" class="min-h-10 rounded-lg px-2 text-xs font-semibold transition">Novo animal</button>
-          </div>
-          <label *ngIf="modoTipoAnimal() === 'existente' && tiposAnimal().length > 1" for="animalExistente" class="block text-sm font-semibold text-slate-700">Animal
-            <select id="animalExistente" name="animalExistente" [ngModel]="animalExistente()" (ngModelChange)="animalExistente.set($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"><option *ngFor="let tipo of tiposAnimal().slice(1)" [ngValue]="tipo">{{ tipo }}</option></select>
+          <label *ngIf="animais().length" for="animalDoEstoque" class="block text-sm font-semibold text-slate-700">Animal
+            <select id="animalDoEstoque" name="animalDoEstoque" [ngModel]="animalIdNovo()" (ngModelChange)="animalIdNovo.set($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"><option *ngFor="let animal of animais(); trackBy: identificarAnimal" [ngValue]="animal.id">{{ animal.nome }}</option></select>
           </label>
-          <label *ngIf="modoTipoAnimal() === 'novo' || tiposAnimal().length <= 1" for="tipoAnimalNovo" class="block text-sm font-semibold text-slate-700">{{ tiposAnimal().length > 1 ? 'Nome do novo animal' : 'Tipo de animal' }}
-            <input id="tipoAnimalNovo" name="tipoAnimalNovo" type="text" [ngModel]="tipoAnimalNovo()" (ngModelChange)="tipoAnimalNovo.set($event)" placeholder="Ex.: Twister" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
-          </label>
+          <p *ngIf="!animais().length" class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Cadastre um animal antes de incluir itens no estoque. <a routerLink="/animais" class="font-semibold underline">Ir para Animais</a></p>
           <label for="descricaoEstoque" class="block text-sm font-semibold text-slate-700">Descrição / faixa<input id="descricaoEstoque" name="descricaoEstoque" type="text" [ngModel]="descricaoNova()" (ngModelChange)="descricaoNova.set($event)" placeholder="Ex.: 10 g a 20 g" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" /></label>
           <div class="grid gap-4 sm:grid-cols-2">
             <label for="quantidadeNova" class="block text-sm font-semibold text-slate-700">Quantidade<input id="quantidadeNova" name="quantidadeNova" type="number" min="1" max="32767" step="1" [ngModel]="quantidadeNova()" (ngModelChange)="quantidadeNova.set($event)" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" /></label>
             <label for="valorUnitarioNovo" class="block text-sm font-semibold text-slate-700">Valor unitário<input id="valorUnitarioNovo" name="valorUnitarioNovo" type="number" min="0" step="0.01" [ngModel]="valorUnitarioNovo()" (ngModelChange)="valorUnitarioNovo.set($event)" placeholder="0,00" required class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" /></label>
           </div>
           <p *ngIf="erro()" role="alert" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ erro() }}</p>
-          <button type="submit" [disabled]="salvando()" class="min-h-12 w-full rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvando() ? 'Salvando...' : 'Salvar no estoque' }}</button>
+          <button type="submit" [disabled]="salvando() || !animais().length" class="min-h-12 w-full rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60">{{ salvando() ? 'Salvando...' : 'Salvar no estoque' }}</button>
         </form>
       </ng-template>
     </section>

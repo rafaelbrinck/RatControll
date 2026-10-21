@@ -1,11 +1,14 @@
 import { Injectable, signal } from '@angular/core';
+import { inject } from '@angular/core';
 import { supabase } from './supabase';
+import { AnimaisService } from './animais';
 
 export interface Caixa {
   id: number;
   numero: number;
   status: boolean;
   user_id: string;
+  animal_id: number | null;
 }
 
 export interface HistoricoCaixa {
@@ -36,6 +39,8 @@ export interface CicloVencido {
 
 @Injectable({ providedIn: 'root' })
 export class CaixasService {
+  private readonly animaisService = inject(AnimaisService);
+
   readonly caixas = signal<Caixa[]>([]);
   readonly ciclosVencidos = signal<CicloVencido[]>([]);
   readonly carregando = signal(false);
@@ -113,7 +118,7 @@ export class CaixasService {
   private async buscarCaixas(userId: string): Promise<Caixa[]> {
     const { data, error } = await supabase
       .from('Caixas')
-      .select('id, numero, status, user_id')
+      .select('id, numero, status, user_id, animal_id')
       .eq('user_id', userId)
       .order('numero', { ascending: true });
 
@@ -124,15 +129,16 @@ export class CaixasService {
     return (data ?? []) as Caixa[];
   }
 
-  async criar(numero: number, userId: string): Promise<Caixa> {
+  async criar(numero: number, userId: string, animalId: number): Promise<Caixa> {
+    await this.validarAnimalDoUsuario(animalId, userId);
     if (this.caixas().some((caixa) => caixa.numero === numero)) {
       throw new Error(`Já existe uma caixa com o número ${numero}.`);
     }
 
     const { data, error } = await supabase
       .from('Caixas')
-      .insert({ numero, user_id: userId, status: false })
-      .select('id, numero, status, user_id')
+      .insert({ numero, user_id: userId, status: false, animal_id: animalId })
+      .select('id, numero, status, user_id, animal_id')
       .single();
 
     if (error) {
@@ -148,6 +154,33 @@ export class CaixasService {
     this.cacheCarregado = true;
     this.dataUltimaSincronizacao = this.hoje();
     return caixa;
+  }
+
+  async vincularAnimal(caixaId: number, userId: string, animalId: number): Promise<Caixa> {
+    await this.validarAnimalDoUsuario(animalId, userId);
+    const { data, error } = await supabase
+      .from('Caixas')
+      .update({ animal_id: animalId })
+      .eq('id', caixaId)
+      .eq('user_id', userId)
+      .select('id, numero, status, user_id, animal_id')
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const caixa = data as Caixa;
+    this.caixas.update((caixas) => caixas.map((atual) => atual.id === caixa.id ? caixa : atual));
+    return caixa;
+  }
+
+  private async validarAnimalDoUsuario(animalId: number, userId: string): Promise<void> {
+    const animais = await this.animaisService.listar(userId);
+    const animal = animais.find((item) => item.id === animalId && item.user_id === userId);
+    if (!animal) {
+      throw new Error('Selecione um animal cadastrado na sua conta.');
+    }
   }
 
   async buscar(caixaId: number, userId: string): Promise<Caixa | undefined> {

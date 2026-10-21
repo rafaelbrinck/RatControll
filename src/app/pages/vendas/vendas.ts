@@ -20,6 +20,7 @@ import {
   VendaResumo,
   VendasService,
 } from '../../core/data/vendas';
+import { Animal, AnimaisService } from '../../core/data/animais';
 import { EstoqueService, ItemEstoque } from '../../core/data/estoque';
 import { AppNavigation } from '../../shared/navigation/app-navigation';
 import { ClienteFormComponent } from '../../shared/cliente-form/cliente-form';
@@ -36,6 +37,7 @@ const TENTATIVA_VENDA_PENDENTE_KEY = 'ratcontroll:vendas:confirmacao-pendente';
 export class VendasPage {
   private readonly auth = inject(Auth);
   private readonly estoqueService = inject(EstoqueService);
+  private readonly animaisService = inject(AnimaisService);
   private readonly vendasService = inject(VendasService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -44,9 +46,10 @@ export class VendasPage {
   private buscaClienteTimer?: ReturnType<typeof setTimeout>;
 
   readonly itensEstoque = this.estoqueService.itens;
+  readonly animais = this.animaisService.animais;
   readonly carrinho = signal<ItemCarrinho[]>([]);
   readonly busca = signal('');
-  readonly filtroAnimal = signal('Todos');
+  readonly filtroAnimal = signal<number | null>(null);
   readonly carregandoEstoque = signal(true);
   readonly atualizandoEstoque = signal(false);
   readonly carregandoHistorico = signal(false);
@@ -70,22 +73,15 @@ export class VendasPage {
   readonly erroCarrinho = computed(() =>
     validarCarrinho(this.carrinho(), this.descontoGeralCentavos()),
   );
-  readonly tiposAnimal = computed(() => [
-    'Todos',
-    ...new Set(
-      this.itensEstoque()
-        .map((item) => item.tipo_animal?.trim())
-        .filter((tipo): tipo is string => !!tipo),
-    ),
-  ]);
   readonly itensFiltrados = computed(() => {
     const termo = this.busca().trim().toLocaleLowerCase('pt-BR');
-    const tipo = this.filtroAnimal();
+    const animalId = this.filtroAnimal();
     return this.itensEstoque().filter((item) => {
-      const correspondeTipo = tipo === 'Todos' || item.tipo_animal === tipo;
+      const nomeAnimal = this.nomeAnimal(item.animal_id);
+      const correspondeTipo = animalId === null || item.animal_id === animalId;
       const correspondeBusca = !termo
         || (item.descricao ?? '').toLocaleLowerCase('pt-BR').includes(termo)
-        || (item.tipo_animal ?? '').toLocaleLowerCase('pt-BR').includes(termo);
+        || nomeAnimal.toLocaleLowerCase('pt-BR').includes(termo);
       return correspondeTipo && correspondeBusca;
     });
   });
@@ -147,7 +143,10 @@ export class VendasPage {
           'Há uma confirmação anterior sem resultado conhecido nesta aba. Consulte o histórico antes de iniciar outra tentativa.',
         );
       }
-      const itensAtualizados = await this.estoqueService.listar(userId, true);
+      const [itensAtualizados] = await Promise.all([
+        this.estoqueService.listar(userId, true),
+        this.animaisService.listar(userId),
+      ]);
       const porId = new Map(itensAtualizados.map((item) => [item.id, item]));
       this.carrinho.update((itens) => itens.map((linha) => ({
         ...linha,
@@ -263,7 +262,15 @@ export class VendasPage {
       this.erro.set(`O saldo de ${item.descricao ?? 'item'} já está todo no carrinho.`);
       return;
     }
-    this.carrinho.update((itens) => adicionarItemCarrinho(itens, item));
+    this.carrinho.update((itens) => adicionarItemCarrinho(itens, item, this.nomeAnimal(item.animal_id)));
+  }
+
+  nomeAnimal(animalId: number | null): string {
+    return this.animais().find((animal) => animal.id === animalId)?.nome ?? 'Animal não vinculado';
+  }
+
+  identificarAnimal(_index: number, animal: Animal): number {
+    return animal.id;
   }
 
   alterarQuantidade(estoqueId: number, quantidade: number | null): void {

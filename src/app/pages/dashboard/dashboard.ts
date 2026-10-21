@@ -6,6 +6,7 @@ import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import QRCode from 'qrcode';
 import { Auth } from '../../core/auth/auth';
 import { Caixa, CaixasService } from '../../core/data/caixas';
+import { Animal, AnimaisService } from '../../core/data/animais';
 import { AppNavigation } from '../../shared/navigation/app-navigation';
 
 type FiltroStatus = 'Todas' | 'Ativas' | 'Livres';
@@ -26,13 +27,16 @@ export class Dashboard implements OnDestroy {
 
   private readonly auth = inject(Auth);
   private readonly caixasService = inject(CaixasService);
+  private readonly animaisService = inject(AnimaisService);
   private readonly router = inject(Router);
   private scannerControls?: IScannerControls;
 
   readonly caixas = this.caixasService.caixas;
+  readonly animais = this.animaisService.animais;
   readonly ciclosVencidos = this.caixasService.ciclosVencidos;
   readonly busca = signal('');
   readonly filtroStatus = signal<FiltroStatus>('Todas');
+  readonly filtroAnimal = signal<number | null>(null);
   readonly formularioCaixaAberto = signal(false);
   readonly qrSelecionado = signal<QrCaixa | undefined>(undefined);
   readonly gerandoQr = signal(false);
@@ -41,15 +45,32 @@ export class Dashboard implements OnDestroy {
     const filtro = this.filtroStatus();
 
     return this.caixas().filter((caixa) => {
-      const correspondeBusca = !termo || `caixa ${caixa.numero}`.includes(termo);
+      const nomeAnimal = this.animalNome(caixa.animal_id).toLocaleLowerCase('pt-BR');
+      const correspondeBusca = !termo
+        || `caixa ${caixa.numero}`.includes(termo)
+        || nomeAnimal.includes(termo);
       const correspondeStatus = filtro === 'Todas'
         || (filtro === 'Ativas' ? caixa.status : !caixa.status);
-      return correspondeBusca && correspondeStatus;
+      const animalId = this.filtroAnimal();
+      const correspondeAnimal = animalId === null || caixa.animal_id === animalId;
+      return correspondeBusca && correspondeStatus && correspondeAnimal;
     });
   });
   readonly totalAtivas = computed(() => this.caixas().filter((caixa) => caixa.status).length);
   readonly totalLivres = computed(() => this.caixas().filter((caixa) => !caixa.status).length);
+  readonly resumoPorAnimal = computed(() =>
+    this.animais().map((animal) => {
+      const caixasDoAnimal = this.caixas().filter((caixa) => caixa.animal_id === animal.id);
+      return {
+        id: animal.id,
+        nome: animal.nome,
+        total: caixasDoAnimal.length,
+        emCiclo: caixasDoAnimal.filter((caixa) => caixa.status).length,
+      };
+    }).filter((item) => item.total > 0),
+  );
   numeroNovaCaixa: number | null = null;
+  readonly animalIdNovo = signal<number | null>(null);
   readonly carregando = signal(true);
   readonly salvando = signal(false);
   readonly scannerAberto = signal(false);
@@ -76,7 +97,10 @@ export class Dashboard implements OnDestroy {
     this.erro.set('');
 
     try {
-      await this.caixasService.listar(currentUserId);
+      await Promise.all([
+        this.caixasService.listar(currentUserId),
+        this.animaisService.listar(currentUserId),
+      ]);
     } catch (error) {
       this.erro.set(error instanceof Error ? error.message : 'Não foi possível carregar as caixas.');
     } finally {
@@ -86,8 +110,9 @@ export class Dashboard implements OnDestroy {
 
   async criarCaixa(): Promise<void> {
     const userId = this.auth.getUserLogado();
-    if (!userId || !Number.isInteger(this.numeroNovaCaixa) || !this.numeroNovaCaixa || this.numeroNovaCaixa < 1) {
-      this.erro.set('Informe um número de caixa válido.');
+    const animalId = this.animalIdNovo();
+    if (!userId || !Number.isInteger(this.numeroNovaCaixa) || !this.numeroNovaCaixa || this.numeroNovaCaixa < 1 || animalId === null) {
+      this.erro.set(animalId === null ? 'Selecione um animal para a caixa.' : 'Informe um número de caixa válido.');
       return;
     }
 
@@ -95,7 +120,7 @@ export class Dashboard implements OnDestroy {
     this.erro.set('');
 
     try {
-      await this.caixasService.criar(this.numeroNovaCaixa, userId);
+      await this.caixasService.criar(this.numeroNovaCaixa, userId, animalId);
       this.numeroNovaCaixa = null;
       this.formularioCaixaAberto.set(false);
       await this.carregarCaixas();
@@ -108,6 +133,20 @@ export class Dashboard implements OnDestroy {
 
   definirFiltroStatus(filtro: FiltroStatus): void {
     this.filtroStatus.set(filtro);
+  }
+
+  abrirCadastroCaixa(): void {
+    this.erro.set('');
+    this.animalIdNovo.set(this.animais()[0]?.id ?? null);
+    this.formularioCaixaAberto.set(true);
+  }
+
+  animalNome(animalId: number | null): string {
+    return this.animais().find((animal) => animal.id === animalId)?.nome ?? 'Animal não vinculado';
+  }
+
+  identificarAnimal(_index: number, animal: Pick<Animal, 'id'>): number {
+    return animal.id;
   }
 
   async abrirQr(caixa: Caixa): Promise<void> {

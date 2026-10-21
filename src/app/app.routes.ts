@@ -35,6 +35,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/estoque/estoque').then((page) => page.EstoquePage),
   },
   {
+    path: 'animais',
+    canActivate: [requireSession],
+    loadComponent: () => import('./pages/animais/animais').then((page) => page.AnimaisPage),
+  },
+  {
     path: 'vendas',
     canActivate: [requireSession],
     loadComponent: () => import('./pages/vendas/vendas').then((page) => page.VendasPage),

@@ -20,7 +20,7 @@ describe('vendas', () => {
     quantidade: 8,
     descricao: 'Rato Wistar',
     valor: 12,
-    tipo_animal: 'Wistar',
+    animal_id: 1,
   };
 
   beforeEach(() => {
@@ -32,8 +32,8 @@ describe('vendas', () => {
   });
 
   it('adiciona um item e incrementa a linha existente sem duplicar', () => {
-    const umaLinha = adicionarItemCarrinho([], estoque);
-    const duasUnidades = adicionarItemCarrinho(umaLinha, estoque);
+    const umaLinha = adicionarItemCarrinho([], estoque, 'Wistar');
+    const duasUnidades = adicionarItemCarrinho(umaLinha, estoque, 'Wistar');
 
     expect(duasUnidades).toHaveLength(1);
     expect(duasUnidades[0].quantidade).toBe(2);
@@ -60,7 +60,7 @@ describe('vendas', () => {
   });
 
   it('aumenta, diminui e remove a linha do carrinho', () => {
-    const carrinho = adicionarItemCarrinho([], estoque);
+    const carrinho = adicionarItemCarrinho([], estoque, 'Wistar');
     const aumentado = atualizarQuantidadeCarrinho(carrinho, estoque.id, 2);
     const diminuido = atualizarQuantidadeCarrinho(aumentado, estoque.id, 1);
     const removido = removerItemCarrinho(diminuido, estoque.id);

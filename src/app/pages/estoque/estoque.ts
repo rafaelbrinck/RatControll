@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Auth } from '../../core/auth/auth';
 import { EstoqueService, ItemEstoque } from '../../core/data/estoque';
+import { Animal, AnimaisService } from '../../core/data/animais';
 import { AppNavigation } from '../../shared/navigation/app-navigation';
 
 interface GrupoEstoque {
-  tipoAnimal: string;
+  animalId: number | null;
+  nomeAnimal: string;
   itens: ItemEstoque[];
 }
 
@@ -20,50 +22,50 @@ interface GrupoEstoque {
 export class EstoquePage {
   private readonly auth = inject(Auth);
   private readonly estoqueService = inject(EstoqueService);
+  private readonly animaisService = inject(AnimaisService);
   private readonly router = inject(Router);
 
   readonly itens = this.estoqueService.itens;
+  readonly animais = this.animaisService.animais;
   readonly carregando = signal(true);
   readonly salvando = signal(false);
   readonly modalAberto = signal(false);
   readonly itemParaRepor = signal<ItemEstoque | undefined>(undefined);
   readonly busca = signal('');
-  readonly filtroAnimal = signal('Todos');
+  readonly filtroAnimal = signal<number | null>(null);
   readonly mensagem = signal('');
   readonly erro = signal('');
   readonly quantidadeNova = signal<number | null>(1);
   readonly quantidadeReposicao = signal<number | null>(1);
-  readonly tipoAnimalNovo = signal('');
-  readonly animalExistente = signal('');
-  readonly modoTipoAnimal = signal<'existente' | 'novo'>('novo');
+  readonly animalIdNovo = signal<number | null>(null);
   readonly descricaoNova = signal('');
   readonly valorUnitarioNovo = signal<number | null>(null);
-  readonly tiposAnimal = computed(() => [
-    'Todos',
-    ...new Set(this.itens().map((item) => item.tipo_animal).filter((tipo): tipo is string => !!tipo)),
-  ]);
   readonly itensFiltrados = computed(() => {
     const termo = this.busca().trim().toLocaleLowerCase('pt-BR');
-    const tipo = this.filtroAnimal();
+    const animalId = this.filtroAnimal();
 
     return this.itens().filter((item) => {
-      const combinaTipo = tipo === 'Todos' || item.tipo_animal === tipo;
+      const combinaTipo = animalId === null || item.animal_id === animalId;
+      const nomeAnimal = this.animais().find((animal) => animal.id === item.animal_id)?.nome ?? '';
       const combinaBusca = !termo
-        || (item.tipo_animal ?? '').toLocaleLowerCase('pt-BR').includes(termo)
+        || nomeAnimal.toLocaleLowerCase('pt-BR').includes(termo)
         || (item.descricao ?? '').toLocaleLowerCase('pt-BR').includes(termo);
       return combinaTipo && combinaBusca;
     });
   });
   readonly gruposFiltrados = computed<GrupoEstoque[]>(() => {
-    const grupos = new Map<string, ItemEstoque[]>();
+    const grupos = new Map<number | null, ItemEstoque[]>();
     for (const item of this.itensFiltrados()) {
-      const tipoAnimal = item.tipo_animal?.trim() || 'Animal não informado';
-      grupos.set(tipoAnimal, [...(grupos.get(tipoAnimal) ?? []), item]);
+      grupos.set(item.animal_id, [...(grupos.get(item.animal_id) ?? []), item]);
     }
 
     return [...grupos.entries()]
-      .sort(([tipoA], [tipoB]) => tipoA.localeCompare(tipoB, 'pt-BR'))
-      .map(([tipoAnimal, itens]) => ({ tipoAnimal, itens }));
+      .map(([animalId, itens]) => ({
+        animalId,
+        nomeAnimal: this.nomeAnimal(animalId),
+        itens,
+      }))
+      .sort((grupoA, grupoB) => grupoA.nomeAnimal.localeCompare(grupoB.nomeAnimal, 'pt-BR'));
   });
 
   constructor() {
@@ -86,7 +88,10 @@ export class EstoquePage {
     this.erro.set('');
 
     try {
-      await this.estoqueService.listar(userId);
+      await Promise.all([
+        this.estoqueService.listar(userId),
+        this.animaisService.listar(userId),
+      ]);
     } catch (error) {
       this.erro.set(error instanceof Error ? error.message : 'Não foi possível carregar o estoque.');
     } finally {
@@ -96,16 +101,21 @@ export class EstoquePage {
 
   abrirCadastro(): void {
     this.itemParaRepor.set(undefined);
-    this.tipoAnimalNovo.set('');
-    const animaisExistentes = this.tiposAnimal().filter((tipo) => tipo !== 'Todos');
-    this.animalExistente.set(animaisExistentes[0] ?? '');
-    this.modoTipoAnimal.set(animaisExistentes.length ? 'existente' : 'novo');
+    this.animalIdNovo.set(this.animais()[0]?.id ?? null);
     this.descricaoNova.set('');
     this.quantidadeNova.set(1);
     this.valorUnitarioNovo.set(null);
     this.mensagem.set('');
     this.erro.set('');
     this.modalAberto.set(true);
+  }
+
+  nomeAnimal(animalId: number | null): string {
+    return this.animais().find((animal) => animal.id === animalId)?.nome ?? 'Animal não vinculado';
+  }
+
+  identificarAnimal(_index: number, animal: Animal): number {
+    return animal.id;
   }
 
   abrirReposicao(item: ItemEstoque): void {
@@ -126,9 +136,10 @@ export class EstoquePage {
     const userId = this.auth.getUserLogado();
     const quantidade = this.quantidadeNova();
     const valorUnitario = this.valorUnitarioNovo();
+    const animalId = this.animalIdNovo();
 
-    if (!userId || quantidade === null || valorUnitario === null) {
-      this.erro.set('Preencha os dados do produto e a quantidade.');
+    if (!userId || animalId === null || quantidade === null || valorUnitario === null) {
+      this.erro.set(animalId === null ? 'Selecione um animal cadastrado.' : 'Preencha os dados do produto e a quantidade.');
       return;
     }
 
@@ -138,15 +149,15 @@ export class EstoquePage {
 
     try {
       const resultado = await this.estoqueService.criarOuAcrescentar(userId, {
-        tipoAnimal: this.modoTipoAnimal() === 'existente' ? this.animalExistente() : this.tipoAnimalNovo(),
+        animalId,
         descricao: this.descricaoNova(),
         quantidade,
         valorUnitario,
       });
       this.modalAberto.set(false);
       this.mensagem.set(resultado.acrescentado
-        ? `Quantidade adicionada ao estoque de ${resultado.item.tipo_animal ?? resultado.item.descricao ?? 'Produto'}.`
-        : `${resultado.item.tipo_animal ?? resultado.item.descricao ?? 'Produto'} cadastrado no estoque.`);
+        ? `Quantidade adicionada a ${this.nomeAnimal(resultado.item.animal_id)}.`
+        : `${this.nomeAnimal(resultado.item.animal_id)} cadastrado no estoque.`);
     } catch (error) {
       this.erro.set(error instanceof Error ? error.message : 'Não foi possível salvar o produto.');
     } finally {
@@ -172,7 +183,7 @@ export class EstoquePage {
       const itemAtualizado = await this.estoqueService.acrescentarQuantidade(userId, item.id, quantidade);
       this.modalAberto.set(false);
       this.itemParaRepor.set(undefined);
-      this.mensagem.set(`${quantidade} unidade(s) adicionada(s) a ${itemAtualizado.tipo_animal ?? itemAtualizado.descricao ?? 'Produto'}.`);
+      this.mensagem.set(`${quantidade} unidade(s) adicionada(s) a ${this.nomeAnimal(itemAtualizado.animal_id)}.`);
     } catch (error) {
       this.erro.set(error instanceof Error ? error.message : 'Não foi possível atualizar a quantidade.');
     } finally {

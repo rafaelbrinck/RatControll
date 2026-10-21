@@ -1,0 +1,48 @@
+<main class="min-h-screen bg-[#f3f7f5] text-slate-900">
+  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="RatControl, início">
+        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 7.5A4.5 4.5 0 0 1 11.5 3h1A4.5 4.5 0 0 1 17 7.5V9a3.5 3.5 0 0 1-3.5 3.5h-7A3.5 3.5 0 0 1 3 9V7.5A4.5 4.5 0 0 1 7.5 3h1A4.5 4.5 0 0 1 7 7.5Z" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12.5h12v5A3.5 3.5 0 0 1 14.5 21h-5A3.5 3.5 0 0 1 6 17.5v-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span><span class="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Biotério</span><span class="block text-sm font-bold">RatControl</span></span>
+      </a>
+      <app-navigation />
+      <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Sair</button>
+    </div>
+  </header>
+
+  <div class="mx-auto max-w-5xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:pb-12 sm:pt-10">
+    <section class="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      <div><p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Cadastros</p><h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Animais</h1><p class="mt-2 text-sm text-slate-600">Tipos de animais usados nas caixas e no estoque.</p></div>
+      <button type="button" (click)="abrirCadastro()" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Novo animal</button>
+    </section>
+
+    <p *ngIf="mensagem()" role="status" class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ mensagem() }}</p>
+    <p *ngIf="erro()" role="alert" class="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ erro() }}</p>
+
+    <section aria-labelledby="animais-lista-titulo">
+      <div class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div><h2 id="animais-lista-titulo" class="text-lg font-bold">Animais cadastrados</h2><p class="mt-1 text-sm text-slate-500">{{ animaisFiltrados.length }} de {{ animais().length }} tipos</p></div>
+        <label class="relative block sm:w-72"><span class="sr-only">Buscar animal</span><svg viewBox="0 0 24 24" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4" stroke-linecap="round"/></svg><input type="search" [ngModel]="busca()" (ngModelChange)="busca.set($event)" name="buscaAnimais" placeholder="Buscar animal..." class="min-h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" /></label>
+      </div>
+
+      <div *ngIf="carregando()" class="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div *ngFor="let linha of [1,2,3]" class="flex animate-pulse items-center gap-4 px-4 py-5"><span class="h-11 w-11 rounded-xl bg-slate-100"></span><span class="h-4 w-40 rounded bg-slate-100"></span></div></div>
+
+      <div *ngIf="!carregando() && animaisFiltrados.length" class="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <article *ngFor="let animal of animaisFiltrados" class="flex items-center justify-between gap-4 px-4 py-4 sm:px-5">
+          <div class="flex min-w-0 items-center gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3c-4 0-7 3-7 7 0 3 1.5 5 4 6v4h6v-4c2.5-1 4-3 4-6 0-4-3-7-7-7Zm-3 7h.01M15 10h.01M9 14c2 1.5 4 1.5 6 0" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div class="min-w-0"><h3 class="truncate font-semibold text-slate-900">{{ animal.nome }}</h3><p class="mt-0.5 text-xs text-slate-500">Cadastrado em {{ animal.created_at | date:'dd/MM/yyyy' }}</p></div></div>
+          <button type="button" (click)="abrirEdicao(animal)" [attr.aria-label]="'Renomear ' + animal.nome" class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="hidden sm:inline">Renomear</span></button>
+        </article>
+      </div>
+
+      <section *ngIf="!carregando() && !animais().length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center"><span class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3c-4 0-7 3-7 7 0 3 1.5 5 4 6v4h6v-4c2.5-1 4-3 4-6 0-4-3-7-7-7Z" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3 class="mt-4 font-bold">Nenhum animal cadastrado</h3><p class="mt-1 text-sm text-slate-500">Cadastre os animais usados no biotério para vinculá-los às caixas e ao estoque.</p><button type="button" (click)="abrirCadastro()" class="mt-5 min-h-11 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white">Cadastrar primeiro animal</button></section>
+      <section *ngIf="!carregando() && animais().length && !animaisFiltrados.length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center"><h3 class="font-semibold text-slate-800">Nenhum animal encontrado</h3><p class="mt-1 text-sm text-slate-500">Ajuste o termo da busca.</p></section>
+    </section>
+  </div>
+
+  <div *ngIf="modalAberto()" class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="animal-modal-titulo" (click)="fecharModal()">
+    <section class="w-full max-w-md rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-3xl sm:p-6" (click)="$event.stopPropagation()">
+      <div class="mb-5 flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Cadastros</p><h2 id="animal-modal-titulo" class="mt-1 text-xl font-bold">{{ animalEditando() ? 'Renomear animal' : 'Cadastrar animal' }}</h2></div><button type="button" (click)="fecharModal()" aria-label="Fechar" class="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-slate-500 hover:bg-slate-100">&times;</button></div>
+      <form (ngSubmit)="salvar()" class="space-y-4"><label for="nomeAnimal" class="block text-sm font-semibold text-slate-700">Nome do animal<input id="nomeAnimal" name="nomeAnimal" type="text" [ngModel]="nome()" (ngModelChange)="nome.set($event)" placeholder="Ex.: Twister" required maxlength="80" class="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" /></label><p *ngIf="erro()" role="alert" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ erro() }}</p><button type="submit" [disabled]="salvando()" class="min-h-12 w-full rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60">{{ salvando() ? 'Salvando...' : animalEditando() ? 'Salvar alteração' : 'Cadastrar animal' }}</button></form>
+    </section>
+  </div>
+</main>

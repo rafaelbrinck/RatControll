@@ -83,6 +83,7 @@ export function paraCentavos(valor: number): number {
 export function adicionarItemCarrinho(
   carrinho: ItemCarrinho[],
   item: ItemEstoque,
+  nomeAnimal: string,
 ): ItemCarrinho[] {
   if (item.quantidade <= 0 || item.valor === null || !Number.isFinite(item.valor)) {
     return carrinho;
@@ -102,7 +103,7 @@ export function adicionarItemCarrinho(
     {
       estoqueId: item.id,
       descricao: item.descricao?.trim() || 'Sem descrição',
-      tipoAnimal: item.tipo_animal?.trim() || 'Tipo não informado',
+      tipoAnimal: nomeAnimal.trim() || 'Animal não vinculado',
       quantidadeDisponivel: item.quantidade,
       quantidade: 1,
       valorUnitarioCentavos: paraCentavos(item.valor),
