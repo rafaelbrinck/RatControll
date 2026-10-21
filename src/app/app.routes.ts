@@ -35,6 +35,21 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/estoque/estoque').then((page) => page.EstoquePage),
   },
   {
+    path: 'vendas',
+    canActivate: [requireSession],
+    loadComponent: () => import('./pages/vendas/vendas').then((page) => page.VendasPage),
+  },
+  {
+    path: 'clientes',
+    canActivate: [requireSession],
+    loadComponent: () => import('./pages/clientes/clientes').then((page) => page.ClientesPage),
+  },
+  {
+    path: 'clientes/:id',
+    canActivate: [requireSession],
+    loadComponent: () => import('./pages/clientes/cliente-detalhe').then((page) => page.ClienteDetalhePage),
+  },
+  {
     path: 'caixa/:id',
     canActivate: [requireSession],
     loadComponent: () => import('./pages/caixa/caixa').then((page) => page.CaixaPage),

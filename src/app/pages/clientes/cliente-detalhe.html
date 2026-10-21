@@ -1,0 +1,58 @@
+<main class="min-h-screen bg-[#f3f7f5] text-slate-900">
+  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+      <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="RatControl, início">
+        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m17-12v6m3-3h-6M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span><span class="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Biotério</span><span class="block text-sm font-bold">RatControl</span></span>
+      </a>
+      <app-navigation />
+      <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Sair</button>
+    </div>
+  </header>
+
+  <div class="mx-auto max-w-6xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:pb-12 sm:pt-10">
+    <div class="mb-5"><a routerLink="/clientes" class="text-sm font-semibold text-emerald-800 hover:underline">← Voltar para clientes</a></div>
+    <div *ngIf="carregando()" role="status" class="rounded-2xl bg-white py-16 text-center text-sm text-slate-500">Carregando cadastro e histórico...</div>
+    <p *ngIf="erro()" role="alert" class="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ erro() }}</p>
+
+    <ng-container *ngIf="cliente() as atual">
+      <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Cadastro do cliente</p><h1 class="mt-2 text-2xl font-bold sm:text-3xl">{{ atual.nome }}</h1><p class="mt-2 text-sm text-slate-500">{{ atual.tipo_pessoa === 'fisica' ? 'Pessoa física' : 'Pessoa jurídica' }} · Cadastrado em {{ atual.created_at | date:'dd/MM/yyyy' }}</p></div>
+          <span [class]="atual.ativo ? 'w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800' : 'w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600'">{{ atual.ativo ? 'Ativo' : 'Inativo' }}</span>
+        </div>
+        <dl class="mt-6 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ atual.tipo_pessoa === 'fisica' ? 'CPF' : 'CNPJ' }}</dt><dd class="mt-1 text-sm font-medium">{{ atual.documento || 'Não informado' }}</dd></div>
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Telefone</dt><dd class="mt-1 text-sm font-medium">{{ atual.telefone || 'Não informado' }}</dd></div>
+          <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">E-mail</dt><dd class="mt-1 break-all text-sm font-medium">{{ atual.email || 'Não informado' }}</dd></div>
+          <div class="sm:col-span-2 lg:col-span-3"><dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Observações</dt><dd class="mt-1 whitespace-pre-wrap text-sm leading-6">{{ atual.observacoes || 'Nenhuma observação.' }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="historico-compras-titulo">
+        <div class="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 id="historico-compras-titulo" class="text-lg font-bold">Histórico de compras</h2><p class="mt-1 text-sm text-slate-500">{{ totalVendas() }} venda(s) vinculada(s)</p></div><a routerLink="/vendas" class="text-sm font-semibold text-emerald-800 hover:underline">Abrir PDV</a></div>
+        <p *ngIf="erroHistorico()" role="alert" class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ erroHistorico() }}</p>
+        <p *ngIf="!carregando() && !erro() && !erroHistorico() && !vendas().length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-600">Este cliente ainda não possui compras registradas.</p>
+        <div *ngIf="!carregando() && vendas().length" class="-mx-4 overflow-x-auto sm:mx-0">
+          <table class="w-full min-w-[700px] text-left text-sm">
+            <thead class="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Venda</th><th class="px-4 py-3">Data</th><th class="px-4 py-3">Status</th><th class="px-4 py-3 text-right">Bruto</th><th class="px-4 py-3 text-right">Descontos</th><th class="px-4 py-3 text-right">Total</th><th class="px-4 py-3">Detalhes</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr *ngFor="let venda of vendas()" class="hover:bg-slate-50">
+                <td class="px-4 py-3 font-semibold">#{{ venda.id }}</td><td class="px-4 py-3">{{ venda.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="px-4 py-3"><span [class]="venda.status === 'cancelada' ? 'rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-800' : 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700'">{{ venda.status }}</span></td>
+                <td class="px-4 py-3 text-right tabular-nums">{{ formatarMoeda(venda.valor_bruto) }}</td><td class="px-4 py-3 text-right tabular-nums">{{ formatarMoeda(venda.desconto_total) }}</td>
+                <td class="px-4 py-3 text-right font-bold tabular-nums">{{ formatarMoeda(venda.valor_total) }}</td><td class="px-4 py-3"><button type="button" (click)="abrirVenda(venda)" class="font-semibold text-emerald-800 hover:underline">Ver venda</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-3 text-xs leading-5 text-slate-500">Vendas canceladas são exibidas para auditoria; valores cancelados não devem ser contabilizados como faturamento realizado.</p>
+        <div *ngIf="totalVendas() > tamanhoPagina" class="mt-4 flex items-center justify-between gap-3">
+          <button type="button" (click)="alterarPagina(pagina() - 1)" [disabled]="pagina() === 0 || carregando()" class="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-semibold disabled:opacity-40">Anterior</button>
+          <span class="text-sm text-slate-500">Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+          <button type="button" (click)="alterarPagina(pagina() + 1)" [disabled]="pagina() + 1 >= totalPaginas() || carregando()" class="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-semibold disabled:opacity-40">Próxima</button>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</main>

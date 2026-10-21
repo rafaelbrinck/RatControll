@@ -1,0 +1,38 @@
+<form (ngSubmit)="enviar()" class="space-y-4">
+  <p *ngIf="erroServidor" role="alert" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ erroServidor }}</p>
+  <p *ngIf="erroValidacao" role="alert" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ erroValidacao }}</p>
+
+  <div class="grid gap-4 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+    <label class="block text-sm font-semibold text-slate-700">Tipo de pessoa
+      <select [(ngModel)]="tipoPessoa" (ngModelChange)="erroValidacao = ''" name="tipoPessoa" class="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100">
+        <option value="fisica">Pessoa física</option>
+        <option value="juridica">Pessoa jurídica</option>
+      </select>
+    </label>
+    <label class="block text-sm font-semibold text-slate-700">Nome ou razão social <span class="text-rose-700">*</span>
+      <input [(ngModel)]="nome" (ngModelChange)="erroValidacao = ''" name="nome" maxlength="160" required autocomplete="name" class="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
+    </label>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <label class="block text-sm font-semibold text-slate-700">{{ rotuloDocumento }} <span class="font-normal text-slate-500">(opcional)</span>
+      <input [(ngModel)]="documento" (ngModelChange)="erroValidacao = ''" name="documento" inputmode="numeric" autocomplete="off" maxlength="18" [placeholder]="tipoPessoa === 'fisica' ? '000.000.000-00' : '00.000.000/0000-00'" class="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
+    </label>
+    <label class="block text-sm font-semibold text-slate-700">Telefone <span class="font-normal text-slate-500">(opcional)</span>
+      <input [(ngModel)]="telefone" (ngModelChange)="erroValidacao = ''" name="telefone" type="tel" autocomplete="tel" maxlength="30" placeholder="(00) 00000-0000" class="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
+    </label>
+  </div>
+
+  <label class="block text-sm font-semibold text-slate-700">E-mail <span class="font-normal text-slate-500">(opcional)</span>
+    <input [(ngModel)]="email" (ngModelChange)="erroValidacao = ''" name="email" type="email" autocomplete="email" maxlength="254" class="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100" />
+  </label>
+
+  <label *ngIf="mostrarObservacoes" class="block text-sm font-semibold text-slate-700">Observações <span class="font-normal text-slate-500">(opcional)</span>
+    <textarea [(ngModel)]="observacoes" (ngModelChange)="erroValidacao = ''" name="observacoes" maxlength="2000" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"></textarea>
+  </label>
+
+  <div class="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+    <button type="button" (click)="cancelar.emit()" [disabled]="salvando" class="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
+    <button type="submit" [disabled]="salvando" class="min-h-11 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-60">{{ salvando ? 'Salvando...' : textoBotao }}</button>
+  </div>
+</form>
