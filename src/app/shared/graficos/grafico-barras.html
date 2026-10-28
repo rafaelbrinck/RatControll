@@ -1,0 +1,16 @@
+<ul class="space-y-3" [attr.aria-label]="titulo()">
+  @for (linha of linhas(); track $index) {
+    <li>
+      <div class="flex items-start justify-between gap-3 text-sm">
+        <span class="line-clamp-2 min-w-0 break-words font-medium text-slate-800">{{ linha.rotulo }}</span>
+        <span class="shrink-0 font-semibold tabular-nums text-slate-900">{{ linha.texto }}</span>
+      </div>
+      <div class="mt-1.5 h-3 w-full overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+        <div class="h-full rounded-full bg-emerald-600" [style.width.%]="linha.largura"></div>
+      </div>
+      @if (linha.detalhe) {
+        <p class="mt-1 text-xs text-slate-500">{{ linha.detalhe }}</p>
+      }
+    </li>
+  }
+</ul>

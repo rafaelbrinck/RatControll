@@ -611,6 +611,10 @@ export class VendasPage {
     return status.charAt(0).toLocaleUpperCase('pt-BR') + status.slice(1);
   }
 
+  abrirRelatorios(){
+    this.router.navigate(['/relatorios']);
+  }
+
   async sair(): Promise<void> {
     await this.auth.logout();
     await this.router.navigateByUrl('/login');

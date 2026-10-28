@@ -1,0 +1,319 @@
+<main class="min-h-screen bg-[#f3f7f5] text-slate-900">
+  <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+      <a routerLink="/dashboard" class="flex items-center gap-3" aria-label="RatControl, início">
+        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 7.5A4.5 4.5 0 0 1 11.5 3h1A4.5 4.5 0 0 1 17 7.5V9a3.5 3.5 0 0 1-3.5 3.5h-7A3.5 3.5 0 0 1 3 9V7.5A4.5 4.5 0 0 1 7.5 3h1A4.5 4.5 0 0 1 7 7.5Z" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12.5h12v5A3.5 3.5 0 0 1 14.5 21h-5A3.5 3.5 0 0 1 6 17.5v-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span><span class="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">Biotério</span><span class="block text-sm font-bold">RatControl</span></span>
+      </a>
+      <app-navigation />
+      <button type="button" (click)="sair()" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Sair</button>
+    </div>
+  </header>
+
+  <div class="mx-auto max-w-7xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:pb-12 sm:pt-10">
+    <section class="mb-7">
+      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Operação do biotério</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Relatórios de vendas</h1>
+      <p class="mt-2 text-sm text-slate-600">Desempenho das vendas finalizadas no PDV.</p>
+    </section>
+
+    <section aria-labelledby="filtro-periodo-titulo" class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <h2 id="filtro-periodo-titulo" class="sr-only">Filtro de período</h2>
+      <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap" role="group" aria-label="Atalhos de período">
+        @for (item of atalhos; track item.id) {
+          <button type="button" (click)="selecionarAtalho(item.id)" [attr.aria-pressed]="atalho() === item.id"
+            [class]="atalho() === item.id ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'"
+            class="flex min-h-11 items-center justify-center rounded-xl border px-2 text-center text-xs font-semibold leading-tight transition sm:px-3 sm:text-sm">{{ item.rotulo }}</button>
+        }
+      </div>
+
+      @if (atalho() === 'personalizado') {
+        <form (ngSubmit)="aplicarPeriodo()" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <label class="min-w-0 text-xs font-semibold text-slate-600">De
+            <input type="date" [ngModel]="inicio()" (ngModelChange)="inicio.set($event)" name="inicioRelatorio" class="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-2 text-base font-normal outline-none focus:border-emerald-600 sm:px-3 sm:text-sm" />
+          </label>
+          <label class="min-w-0 text-xs font-semibold text-slate-600">Até
+            <input type="date" [ngModel]="fim()" (ngModelChange)="fim.set($event)" name="fimRelatorio" class="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-2 text-base font-normal outline-none focus:border-emerald-600 sm:px-3 sm:text-sm" />
+          </label>
+          <button type="submit" class="col-span-2 min-h-11 rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800 sm:col-span-1">Aplicar</button>
+        </form>
+      }
+
+      @if (erroFiltro()) {
+        <p role="alert" class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{{ erroFiltro() }}</p>
+      }
+
+      <p class="mt-3 text-xs text-slate-500">
+        Período exibido: <strong class="text-slate-700">{{ formatarDataBR(periodo().inicio) }}</strong> a <strong class="text-slate-700">{{ formatarDataBR(periodo().fim) }}</strong> (fuso de São Paulo)
+      </p>
+    </section>
+
+    <section aria-labelledby="resumo-titulo" class="mb-6">
+      <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <h2 id="resumo-titulo" class="text-lg font-bold">Resumo do período</h2>
+        @if (resumo().dados; as dados) {
+          <p class="text-xs text-slate-500">Comparado a {{ formatarDataBR(dados.anterior.data_inicio) }} – {{ formatarDataBR(dados.anterior.data_fim) }}</p>
+        }
+      </div>
+
+      @if (resumo().erro) {
+        <div role="alert" class="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-sm text-rose-800">{{ resumo().erro }}</p>
+          <button type="button" (click)="carregarResumo()" class="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800">Tentar novamente</button>
+        </div>
+      } @else if (!resumo().dados) {
+        <div role="status" class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          @for (i of [1, 2, 3, 4, 5]; track i) {
+            <div class="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" [class]="i === 1 ? 'col-span-2 lg:col-span-1' : ''"></div>
+          }
+        </div>
+      } @else {
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-5" [class.opacity-60]="resumo().carregando">
+          @for (card of cards(); track card.id) {
+            <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4" [class]="$first ? 'col-span-2 lg:col-span-1' : ''">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">{{ card.rotulo }}</p>
+              <p class="mt-1.5 break-words font-bold tabular-nums sm:mt-2 sm:text-2xl" [class]="$first ? 'text-3xl' : 'text-xl'">{{ card.valor }}</p>
+              <p class="mt-1 text-xs leading-snug" [class]="card.classeVariacao">{{ card.variacaoTexto }}</p>
+            </article>
+          }
+        </div>
+        @if (resumo().dados?.atual?.vendas === 0 && !resumo().carregando) {
+          <p class="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600">Nenhuma venda finalizada neste período.</p>
+        }
+      }
+    </section>
+
+    <section aria-labelledby="serie-titulo" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 id="serie-titulo" class="text-lg font-bold">Evolução do faturamento</h2>
+          <p class="mt-1 text-sm text-slate-500">Faturamento líquido por {{ rotuloGranularidade() }}</p>
+        </div>
+        <div class="flex w-full rounded-xl border border-slate-300 bg-white p-1 sm:w-auto" role="group" aria-label="Agrupar por">
+          @for (item of granularidades; track item.id) {
+            <button type="button" (click)="alterarGranularidade(item.id)" [attr.aria-pressed]="granularidade() === item.id"
+              [class]="granularidade() === item.id ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'"
+              class="min-h-10 flex-1 rounded-lg px-3 text-xs font-semibold transition sm:flex-none">{{ item.rotulo }}</button>
+          }
+        </div>
+      </div>
+
+      @if (serie().erro) {
+        <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-sm text-rose-800">{{ serie().erro }}</p>
+          <button type="button" (click)="carregarSerie()" class="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800">Tentar novamente</button>
+        </div>
+      } @else if (!serie().dados) {
+        <div role="status" class="h-52 animate-pulse rounded-xl bg-slate-100"></div>
+      } @else if (serieSemVendas()) {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center">
+          <p class="font-semibold">Nenhuma venda finalizada neste período</p>
+          <p class="mt-1 text-sm text-slate-500">Escolha outro período para ver a evolução.</p>
+        </div>
+      } @else {
+        <div [class.opacity-60]="serie().carregando">
+          <app-grafico-linha titulo="Faturamento líquido" [pontos]="pontosGrafico()" [formatarValor]="formatarMoeda" [formatarEixo]="formatarMoedaCompacta" />
+        </div>
+        @if (serieParcial()) {
+          <p class="mt-3 text-xs text-slate-500">O primeiro e o último intervalo podem ser parciais, conforme o período escolhido.</p>
+        }
+      }
+    </section>
+
+    <section aria-labelledby="produto-titulo" class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div class="mb-4">
+        <h2 id="produto-titulo" class="text-lg font-bold">Vendas por animal e produto</h2>
+        <p class="mt-1 text-sm text-slate-500">Receita antes do desconto geral da venda.</p>
+      </div>
+
+      @if (produto().erro) {
+        <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-sm text-rose-800">{{ produto().erro }}</p>
+          <button type="button" (click)="carregarProduto()" class="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800">Tentar novamente</button>
+        </div>
+      } @else if (!produto().dados) {
+        <div role="status" class="h-48 animate-pulse rounded-xl bg-slate-100"></div>
+      } @else if (produtoSemVendas()) {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+          <p class="font-semibold">Nenhuma venda finalizada neste período</p>
+        </div>
+      } @else {
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" [class.opacity-60]="produto().carregando">
+          <div class="min-w-0">
+            <h3 class="mb-3 text-sm font-bold text-slate-700">Receita por animal</h3>
+            <app-grafico-barras titulo="Receita por animal" [itens]="barrasAnimais()" [formatarValor]="formatarMoeda" />
+          </div>
+          <div class="min-w-0">
+            <h3 class="mb-1 text-sm font-bold text-slate-700">Produtos mais vendidos</h3>
+            <ul class="divide-y divide-slate-100 border-y border-slate-200">
+              @for (item of produtosVisiveis(); track $index) {
+                <li class="flex items-start justify-between gap-3 py-3">
+                  <div class="min-w-0">
+                    <p class="break-words text-sm font-medium">{{ item.produto }}</p>
+                    <p class="mt-0.5 text-xs text-slate-500">{{ item.animalNome }} · {{ item.quantidade }} un. · {{ formatarPercentual(item.participacao) }}</p>
+                  </div>
+                  <p class="shrink-0 text-sm font-semibold tabular-nums">{{ formatarMoeda(item.receita) }}</p>
+                </li>
+              }
+            </ul>
+            @if (totalProdutos() > 10) {
+              <button type="button" (click)="mostrarTodosProdutos.set(!mostrarTodosProdutos())" class="mt-3 min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:w-auto">
+                {{ mostrarTodosProdutos() ? 'Mostrar menos' : 'Ver todos (' + totalProdutos() + ')' }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <section aria-labelledby="descontos-titulo" class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div class="mb-4">
+        <h2 id="descontos-titulo" class="text-lg font-bold">Descontos</h2>
+        <p class="mt-1 text-sm text-slate-500">Descontos por item mais o desconto geral das vendas finalizadas.</p>
+      </div>
+
+      @if (descontos().erro) {
+        <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-sm text-rose-800">{{ descontos().erro }}</p>
+          <button type="button" (click)="carregarDescontos()" class="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800">Tentar novamente</button>
+        </div>
+      } @else if (!descontos().dados) {
+        <div role="status" class="h-32 animate-pulse rounded-xl bg-slate-100"></div>
+      } @else {
+        @let d = descontos().dados!;
+        @if (d.descontosTotal === 0) {
+          <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+            <p class="font-semibold">Nenhum desconto concedido neste período</p>
+          </div>
+        } @else {
+          <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" [class.opacity-60]="descontos().carregando">
+            <div class="min-w-0">
+              <dl class="grid grid-cols-2 gap-3">
+                <div class="min-w-0 rounded-xl bg-slate-50 p-3"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Total concedido</dt><dd class="mt-1 break-words text-lg font-bold tabular-nums sm:text-xl">{{ formatarMoeda(d.descontosTotal) }}</dd></div>
+                <div class="min-w-0 rounded-xl bg-slate-50 p-3"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Sobre o bruto</dt><dd class="mt-1 break-words text-lg font-bold tabular-nums sm:text-xl">{{ formatarPercentual(d.percentualSobreBruto) }}</dd></div>
+                <div class="min-w-0 rounded-xl bg-slate-50 p-3"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Nos itens</dt><dd class="mt-1 break-words text-lg font-bold tabular-nums">{{ formatarMoeda(d.descontosItens) }}</dd></div>
+                <div class="min-w-0 rounded-xl bg-slate-50 p-3"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Desconto geral</dt><dd class="mt-1 break-words text-lg font-bold tabular-nums">{{ formatarMoeda(d.descontoGeral) }}</dd></div>
+              </dl>
+              <p class="mt-3 text-sm text-slate-600">{{ d.vendasComDesconto }} {{ d.vendasComDesconto === 1 ? 'venda teve' : 'vendas tiveram' }} desconto neste período.</p>
+              @if (d.vendasInconsistentes > 0) {
+                <p role="status" class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">{{ d.vendasInconsistentes }} {{ d.vendasInconsistentes === 1 ? 'venda tem' : 'vendas têm' }} total maior que o bruto menos os descontos dos itens. Confira no histórico do PDV.</p>
+              }
+            </div>
+            <div class="min-w-0">
+              <h3 class="mb-3 text-sm font-bold text-slate-700">Itens mais descontados</h3>
+              @if (barrasDescontos().length) {
+                <app-grafico-barras titulo="Itens mais descontados" [itens]="barrasDescontos()" [formatarValor]="formatarMoeda" />
+              } @else {
+                <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">Nenhum item teve desconto por unidade. O desconto do período foi aplicado no total das vendas.</p>
+              }
+            </div>
+          </div>
+        }
+      }
+    </section>
+
+    <section aria-labelledby="clientes-titulo" class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div class="mb-4">
+        <h2 id="clientes-titulo" class="text-lg font-bold">Clientes</h2>
+        <p class="mt-1 text-sm text-slate-500">Os 10 clientes que mais compraram no período.</p>
+      </div>
+
+      @if (clientes().erro) {
+        <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-sm text-rose-800">{{ clientes().erro }}</p>
+          <button type="button" (click)="carregarClientes()" class="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800">Tentar novamente</button>
+        </div>
+      } @else if (!clientes().dados) {
+        <div role="status" class="h-32 animate-pulse rounded-xl bg-slate-100"></div>
+      } @else if (clientesSemVendas()) {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+          <p class="font-semibold">Nenhuma venda finalizada neste período</p>
+        </div>
+      } @else {
+        @let c = clientes().dados!;
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" [class.opacity-60]="clientes().carregando">
+          <dl class="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-1">
+            <div class="min-w-0 rounded-xl bg-slate-50 p-3"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Clientes que compraram</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ c.clientesDistintos }}</dd></div>
+            <div class="min-w-0 rounded-xl bg-slate-50 p-3"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Novos compradores</dt><dd class="mt-1 text-xl font-bold tabular-nums">{{ c.novosCompradores }}</dd></div>
+            <div class="col-span-2 min-w-0 rounded-xl bg-slate-50 p-3 lg:col-span-1"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Vendas sem identificação</dt><dd class="mt-1 break-words text-lg font-bold tabular-nums">{{ c.semIdentificacao.vendas }} · {{ formatarMoeda(c.semIdentificacao.total) }}</dd></div>
+          </dl>
+          <div class="min-w-0">
+            <h3 class="mb-3 text-sm font-bold text-slate-700">Ranking por valor comprado</h3>
+            @if (barrasClientes().length) {
+              <app-grafico-barras titulo="Ranking de clientes" [itens]="barrasClientes()" [formatarValor]="formatarMoeda" />
+            } @else {
+              <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">Todas as vendas do período foram registradas sem cliente.</p>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <section aria-labelledby="estoque-titulo" class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="estoque-titulo" class="text-lg font-bold">Estoque × vendas</h2>
+          <p class="mt-1 text-sm text-slate-500">Saldo atual comparado ao ritmo de venda do período.</p>
+        </div>
+        <label class="block text-xs font-semibold text-slate-600">Alertar com cobertura menor que
+          <select [ngModel]="diasAlerta()" (ngModelChange)="alterarDiasAlerta($event)" name="diasAlerta" class="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base font-medium sm:w-auto sm:text-sm">
+            @for (dias of opcoesDiasAlerta; track dias) {
+              <option [ngValue]="dias">{{ dias }} dias</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (estoque().erro) {
+        <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p class="text-sm text-rose-800">{{ estoque().erro }}</p>
+          <button type="button" (click)="carregarEstoque()" class="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-800">Tentar novamente</button>
+        </div>
+      } @else if (!estoque().dados) {
+        <div role="status" class="h-48 animate-pulse rounded-xl bg-slate-100"></div>
+      } @else if (!estoque().dados!.length) {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+          <p class="font-semibold">Nenhum item no estoque</p>
+        </div>
+      } @else {
+        <div [class.opacity-60]="estoque().carregando">
+          <div class="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" role="group" aria-label="Filtrar por situação">
+            @for (item of filtrosSituacao; track item.id) {
+              <button type="button" (click)="filtroSituacao.set(item.id)" [attr.aria-pressed]="filtroSituacao() === item.id"
+                [class]="filtroSituacao() === item.id ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold transition sm:text-sm">
+                {{ item.rotulo }}
+                @if (item.id !== 'todos') {
+                  <span class="tabular-nums opacity-80">{{ resumoEstoque()[item.id] }}</span>
+                }
+              </button>
+            }
+          </div>
+
+          <ul class="divide-y divide-slate-100 border-y border-slate-200">
+            @for (item of itensEstoqueFiltrados(); track item.estoqueId) {
+              <li class="py-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="break-words text-sm font-medium">{{ item.descricao }}</p>
+                    <p class="text-xs text-slate-500">{{ item.animalNome }}</p>
+                  </div>
+                  <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" [class]="classeSituacao(item.situacao)">{{ rotuloSituacao(item.situacao) }}</span>
+                </div>
+                <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                  <div class="flex justify-between gap-2 sm:block"><dt class="text-slate-500">Saldo</dt><dd class="font-semibold tabular-nums">{{ item.saldoAtual }}</dd></div>
+                  <div class="flex justify-between gap-2 sm:block"><dt class="text-slate-500">Vendido</dt><dd class="font-semibold tabular-nums">{{ item.vendidoPeriodo }}</dd></div>
+                  <div class="flex justify-between gap-2 sm:block"><dt class="text-slate-500">Média/dia</dt><dd class="font-semibold tabular-nums">{{ item.mediaDiaria }}</dd></div>
+                  <div class="flex justify-between gap-2 sm:block"><dt class="text-slate-500">Cobertura</dt><dd class="font-semibold tabular-nums">{{ item.diasCobertura === null ? '—' : item.diasCobertura + ' dias' }}</dd></div>
+                </dl>
+              </li>
+            } @empty {
+              <li class="py-8 text-center text-sm text-slate-500">Nenhum item nesta situação.</li>
+            }
+          </ul>
+          <p class="mt-3 text-xs text-slate-500">O saldo é o atual, não o do fim do período. Cobertura = saldo ÷ média diária de venda; "—" significa sem vendas no período.</p>
+        </div>
+      }
+    </section>
+  </div>
+</main>

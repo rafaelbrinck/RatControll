@@ -21,6 +21,7 @@
       </div>
       <div class="flex flex-wrap gap-2">
         <button *ngIf="!exibindoHistorico()" type="button" (click)="abrirHistorico()" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Histórico de vendas</button>
+        <button *ngIf="!exibindoHistorico()" type="button" (click)="abrirRelatorios()" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Relatórios de vendas</button>
         <button *ngIf="exibindoHistorico()" type="button" (click)="voltarAoPdv()" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Voltar ao PDV</button>
         <button *ngIf="!exibindoHistorico()" type="button" (click)="atualizarEstoque()" [disabled]="carregandoEstoque()" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">{{ carregandoEstoque() ? 'Atualizando...' : 'Atualizar estoque' }}</button>
       </div>

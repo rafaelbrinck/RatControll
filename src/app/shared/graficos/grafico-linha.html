@@ -1,0 +1,54 @@
+@let g = geometria();
+@let sel = leitura();
+<figure class="w-full">
+  <p class="mb-2 flex min-h-6 flex-wrap items-baseline gap-x-2 text-sm leading-6" aria-live="polite">
+    @if (sel) {
+      <span class="font-semibold text-slate-900">{{ sel.descricao }}</span>
+      <span class="font-bold tabular-nums text-emerald-800">{{ sel.texto }}</span>
+    } @else {
+      <span class="text-xs text-slate-500">Toque no gráfico para ver o valor de cada ponto.</span>
+    }
+  </p>
+
+  <svg [attr.viewBox]="viewBox()" [attr.height]="altura()" role="img" [attr.aria-label]="rotuloAcessivel()"
+    class="block w-full touch-pan-y select-none"
+    (pointerdown)="selecionarPorEvento($event)" (pointermove)="selecionarPorEvento($event)">
+    @for (marca of g.marcas; track $index) {
+      <line [attr.x1]="g.x0" [attr.x2]="g.x1" [attr.y1]="marca.y" [attr.y2]="marca.y" class="stroke-slate-200" stroke-width="1" />
+      <text [attr.x]="g.x0 - 8" [attr.y]="marca.y + 4" text-anchor="end" font-size="12" class="fill-slate-500">{{ marca.rotulo }}</text>
+    }
+
+    @if (g.area) {
+      <path [attr.d]="g.area" class="fill-emerald-100/70" />
+    }
+    @if (g.linha) {
+      <path [attr.d]="g.linha" fill="none" class="stroke-emerald-600" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+    }
+
+    @for (p of g.pts; track $index) {
+      @if (p.mostrarRotulo) {
+        <text [attr.x]="p.x" [attr.y]="g.baseY + 20" text-anchor="middle" font-size="12" class="fill-slate-500">{{ p.rotulo }}</text>
+      }
+      @if (g.mostrarMarcadores) {
+        <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3.5" class="fill-white stroke-emerald-600" stroke-width="2" />
+      }
+    }
+
+    @if (sel) {
+      <line [attr.x1]="sel.x" [attr.x2]="sel.x" [attr.y1]="g.topo" [attr.y2]="g.baseY" class="stroke-slate-400" stroke-width="1" stroke-dasharray="3 3" />
+      <circle [attr.cx]="sel.x" [attr.cy]="sel.y" r="5" class="fill-emerald-600 stroke-white" stroke-width="2" />
+    }
+  </svg>
+
+  <table class="sr-only">
+    <caption>{{ titulo() }}</caption>
+    <thead>
+      <tr><th scope="col">Período</th><th scope="col">Valor</th></tr>
+    </thead>
+    <tbody>
+      @for (p of g.pts; track $index) {
+        <tr><td>{{ p.descricao }}</td><td>{{ p.texto }}</td></tr>
+      }
+    </tbody>
+  </table>
+</figure>
